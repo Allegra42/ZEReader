@@ -1,0 +1,8 @@
+common:
+  tags:
+    - lib
+    - epub
+  
+tests:
+  lib.epub:
+    type: unit
