@@ -16,7 +16,8 @@ SPDX-License-Identifier: MPL-2.0
   <img alt="API Documentation" src="https://img.shields.io/badge/API-documentation-3D578C?logo=c&logoColor=white">
 </a>
 
-<img alt="ZEReader in Action" src='/doc/pics/ZEReader.webp' width="500" />
+<!-- <img alt="ZEReader in Action" src='/doc/pics/ZEReader.webp' width="500" /> -->
+![ZEReader in Action](/doc/pics/ZEReader-vid.webp)
 
 ZEReader is a Zephyr based firmware for an open hardware eBook reader approach.
 See https://github.com/Allegra42/ZEReader-KiCad for more information about the hardware design.
