@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#include <lib/ui/context.h>
+#include <ui/context.h>
 
-const char* context_strings[] = {
+const char *context_strings[] = {
     "MENU",
     "READING",
     "SETTINGS"

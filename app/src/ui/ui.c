@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#include <lib/epub/epub.h>
-#include <lib/ui/ui.h>
-#include <lib/ui/fonts/notoserif_14.h>
-#include <lib/ui/logo/zereaderlogomarx.h>
+#include <epub/epub.h>
+
+#include <ui/ui.h>
+#include <ui/fonts/notoserif_14.h>
+#include <ui/logo/zereaderlogomarx.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ui, CONFIG_ZEREADER_LOG_LEVEL);
@@ -16,20 +17,23 @@ LV_FONT_DECLARE(notoserif_14);
 
 const struct device *display_dev;
 
-lv_obj_t *button_4;
-lv_obj_t *button_3;
-lv_obj_t *button_2;
-lv_obj_t *button_1;
+static lv_obj_t *button_1;
+static lv_obj_t *button_1_label;
 
-lv_obj_t *button_4_label;
-lv_obj_t *button_3_label;
-lv_obj_t *button_2_label;
-lv_obj_t *button_1_label;
+static lv_obj_t *button_2;
+static lv_obj_t *button_2_label;
 
-lv_obj_t *text_area;
-lv_obj_t *logo;
+static lv_obj_t *button_3;
+static lv_obj_t *button_3_label;
 
-lv_obj_t *book_roller;
+static lv_obj_t *button_4;
+static lv_obj_t *button_4_label;
+
+static lv_obj_t *text_area;
+
+static lv_obj_t *logo;
+
+static lv_obj_t *book_roller;
 
 static lv_style_t font_style;
 
@@ -37,7 +41,6 @@ uint8_t page_ctr;
 
 void zereader_print_prev_page();
 void zereader_print_next_page();
-
 
 static void book_roller_event_handler(lv_event_t *e)
 {
@@ -50,10 +53,10 @@ static void book_roller_event_handler(lv_event_t *e)
 	if (code == LV_EVENT_VALUE_CHANGED)
 	{
 		*context = READING;
-		lv_label_set_text(button_1_label, "prev");
-		lv_label_set_text(button_2_label, "books");
-		lv_label_set_text(button_3_label, " - ");
-		lv_label_set_text(button_4_label, "next");
+		lv_label_set_text(button_1_label, BT_PREV);
+		lv_label_set_text(button_2_label, BT_MENU);
+		lv_label_set_text(button_3_label, BT_NONE);
+		lv_label_set_text(button_4_label, BT_NEXT);
 		lv_obj_del(book_roller);
 		book_roller = NULL;
 		epub_open_book(epub_get_book_entry_for_num(book_nr));
@@ -125,10 +128,10 @@ static void button_2_clicked_cb(lv_event_t *e)
 	{
 		*context = MENU;
 
-		lv_label_set_text(button_1_label, "up");
-		lv_label_set_text(button_2_label, "ok");
-		lv_label_set_text(button_3_label, "exit");
-		lv_label_set_text(button_4_label, "down");
+		lv_label_set_text(button_1_label, BT_UP);
+		lv_label_set_text(button_2_label, BT_OK);
+		lv_label_set_text(button_3_label, BT_EXIT);
+		lv_label_set_text(button_4_label, BT_DOWN);
 
 		zereader_show_bookmenu(context);
 	}
@@ -151,15 +154,14 @@ static void button_3_clicked_cb(lv_event_t *e)
 	}
 	else if (*context == MENU)
 	{
-		// switch_to_reading_context(context);
 		*context = READING;
-		lv_label_set_text(button_1_label, "prev");
-		lv_label_set_text(button_2_label, "books");
-		lv_label_set_text(button_3_label, " - ");
-		lv_label_set_text(button_4_label, "next");
+		lv_label_set_text(button_1_label, BT_PREV);
+		lv_label_set_text(button_2_label, BT_MENU);
+		lv_label_set_text(button_3_label, BT_NONE);
+		lv_label_set_text(button_4_label, BT_NEXT);
 		lv_obj_del(book_roller);
 		book_roller = NULL;
-		lv_obj_invalidate(text_area);
+		// lv_obj_invalidate(text_area);
 	}
 }
 
@@ -185,17 +187,13 @@ static void button_4_clicked_cb(lv_event_t *e)
 
 void zereader_setup_control_buttons(context_t *context)
 {
-	LOG_DBG("Button Setup");
 	button_1 = lv_button_create(lv_screen_active());
 	lv_obj_add_style(button_1, &font_style, 0);
-	LOG_DBG("Button created");
 	lv_obj_align(button_1, LV_ALIGN_BOTTOM_LEFT, 10, -5);
-	LOG_DBG("Button aligned");
 	lv_obj_add_event_cb(button_1, button_1_clicked_cb, LV_EVENT_CLICKED, context);
-	LOG_DBG("Button callback added");
 
 	button_1_label = lv_label_create(button_1);
-	lv_label_set_text(button_1_label, "prev page");
+	lv_label_set_text(button_1_label, BT_PREV);
 	lv_obj_center(button_1_label);
 
 	button_2 = lv_button_create(lv_screen_active());
@@ -204,7 +202,7 @@ void zereader_setup_control_buttons(context_t *context)
 	lv_obj_add_event_cb(button_2, button_2_clicked_cb, LV_EVENT_CLICKED, context);
 
 	button_2_label = lv_label_create(button_2);
-	lv_label_set_text(button_2_label, "menu");
+	lv_label_set_text(button_2_label, BT_MENU);
 	lv_obj_center(button_2_label);
 
 	button_3 = lv_button_create(lv_screen_active());
@@ -213,7 +211,7 @@ void zereader_setup_control_buttons(context_t *context)
 	lv_obj_add_event_cb(button_3, button_3_clicked_cb, LV_EVENT_CLICKED, context);
 
 	button_3_label = lv_label_create(button_3);
-	lv_label_set_text(button_3_label, "settings");
+	lv_label_set_text(button_3_label, BT_NONE);
 	lv_obj_center(button_3_label);
 
 	button_4 = lv_button_create(lv_screen_active());
@@ -222,7 +220,7 @@ void zereader_setup_control_buttons(context_t *context)
 	lv_obj_add_event_cb(button_4, button_4_clicked_cb, LV_EVENT_CLICKED, context);
 
 	button_4_label = lv_label_create(button_4);
-	lv_label_set_text(button_4_label, "next page");
+	lv_label_set_text(button_4_label, BT_NEXT);
 	lv_obj_center(button_4_label);
 }
 
@@ -247,7 +245,8 @@ void screen_health()
 {
 	page_ctr++;
 
-	if (page_ctr > 7) {
+	if (page_ctr > 7)
+	{
 		page_ctr = 0;
 		display_blanking_on(display_dev);
 		lv_timer_handler();
@@ -258,15 +257,24 @@ void screen_health()
 void zereader_print_next_page()
 {
 	lv_textarea_set_text(text_area, epub_get_next_page());
-	//lv_textarea_add_text(text_area, epub_get_next_page());
+	// lv_textarea_add_text(text_area, epub_get_next_page());
 	screen_health();
 }
 
 void zereader_print_current_page()
 {
+	LOG_DBG("In print current page");
 	epub_get_prev_page();
-	lv_textarea_set_text(text_area, epub_get_next_page());
-	//lv_textarea_add_text(text_area, epub_get_next_page());
+	LOG_DBG("Got prev page");
+	char *page = epub_get_next_page();
+	if (strcmp(page, "") == 0)
+	{
+		// Fetch the next page in case sitting on a chapter border
+		page = epub_get_next_page();
+	}
+
+	lv_textarea_set_text(text_area, page);
+	// lv_textarea_add_text(text_area, epub_get_next_page());
 	screen_health();
 }
 
@@ -280,8 +288,6 @@ void zereader_clean_page()
 {
 	zereader_clean_logo();
 	lv_textarea_set_text(text_area, " ");
-	lv_obj_invalidate(logo);
-	lv_obj_invalidate(text_area);
 	lv_timer_handler();
 	display_blanking_on(display_dev);
 	display_blanking_off(display_dev);

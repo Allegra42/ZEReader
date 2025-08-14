@@ -20,9 +20,9 @@
  */
 typedef enum
 {
-    MENU = 0,   /**< Menu context. */
-    READING,    /**< Reading context. */
-    SETTINGS    /**< Settings context. */
+    MENU = 0, /**< Menu context. */
+    READING,  /**< Reading context. */
+    SETTINGS  /**< Settings context. */
 
 } context_t;
 

@@ -11,14 +11,14 @@
 #include <zephyr/drivers/display.h>
 #include <zephyr/kernel.h>
 
-#include <lib/epub/epub.h>
-#include <lib/ui/ui.h>
+#include <epub/epub.h>
+#include <ui/ui.h>
 
 LOG_MODULE_REGISTER(main, CONFIG_ZEREADER_LOG_LEVEL);
 
 int main(void)
 {
-	LOG_DBG("Hello World - ZEReader! %s\n", CONFIG_BOARD_TARGET);
+	LOG_DBG("ZEReader started! %s\n", CONFIG_BOARD_TARGET);
 
 	// Initialize the choosen zephyr,display device
 	// -> Make the device tree description available for the software part
@@ -39,6 +39,7 @@ int main(void)
 	}
 
 	context_t context = READING;
+
 	zereader_setup_page();
 	zereader_setup_control_buttons(&context);
 	zereader_show_logo();
@@ -46,15 +47,11 @@ int main(void)
 	display_blanking_off(display_dev);
 
 	epub_initialize();
+	epub_restore_book();
+
 	zereader_clean_page();
 
-	epub_restore_book();
 	zereader_print_current_page();
-
-
-	// Testing
-	// epub_open_book(epub_get_book_entry(2));
-
 
 	lv_timer_handler();
 

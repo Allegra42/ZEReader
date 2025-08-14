@@ -14,7 +14,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/devicetree.h>
 
-#include <lib/sd/sd.h>
+#include <sd/sd.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(sd_utils, CONFIG_ZEREADER_LOG_LEVEL);
@@ -29,7 +29,7 @@ static struct fs_mount_t mount_point = {
 char *sd_build_full_path(const char *folder, const char *filename, int *error)
 {
     char *fullpath = NULL;
-    uint32_t path_len = strlen(sd_rootpath) + strlen(folder) + strlen(filename);
+    uint32_t path_len = strlen(SD_ROOTPATH) + strlen(folder) + strlen(filename);
 
     if (path_len > CONFIG_FS_FATFS_MAX_LFN)
     {
@@ -47,7 +47,7 @@ char *sd_build_full_path(const char *folder, const char *filename, int *error)
     }
 
     memset(fullpath, 0, path_len + 1);
-    memcpy(fullpath, sd_rootpath, strlen(sd_rootpath));
+    memcpy(fullpath, SD_ROOTPATH, strlen(SD_ROOTPATH));
     strncat(fullpath, folder, strlen(folder));
     strncat(fullpath, filename, strlen(filename));
 
@@ -84,7 +84,7 @@ int sd_initialize(void)
         return ret;
     }
 
-    mount_point.mnt_point = sd_mountpoint;
+    mount_point.mnt_point = SD_MOUNTPOINT;
 
     ret = fs_mount(&mount_point);
     if (ret)
