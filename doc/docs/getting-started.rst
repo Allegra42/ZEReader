@@ -12,6 +12,7 @@ Setup a Local Development Environment
     west init -m git@github.com:Allegra42/ZEReader.git zereader-workspace
 
     cd zereader-workspace
+    source .venv/bin/activate
 
     west update
     pip install -r zephyr-rtos/scripts/requirements.txt
@@ -20,6 +21,14 @@ Setup a Local Development Environment
 
 Build the Firmware Binary
 -------------------------
+Always source the venv environment first!
+
+.. code-block:: bash
+
+    cd zereader-workspace
+    source .venv/bin/activate
+
+    cd ZEReader
 
 Raspberry Pi Pico 1
 ~~~~~~~~~~~~~~~~~~~

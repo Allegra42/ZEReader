@@ -43,6 +43,9 @@ west init -m git@github.com:Allegra42/ZEReader.git zereader-workspace
 
 cd zereader-workspace
 
+python3 -m venv .venv
+source .venv/bin/activate
+
 west update
 pip install -r zephyr-rtos/scripts/requirements.txt
 cd zephyr-rtos
@@ -51,6 +54,14 @@ west sdk install
 
 
 ## Build
+Always source the venv environment first!
+```
+cd zereader-workspace
+source .venv/bin/activate
+
+cd ZEReader
+```
+
 ### Build for Raspberry Pi Pico 1
 ```
 west build -b rpi_pico app -p always
