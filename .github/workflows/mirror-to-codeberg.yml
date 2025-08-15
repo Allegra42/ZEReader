@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2025 Anna-Lena Marx <mail@marx.engineer>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+name: Mirror to Codeberg
+
+on: [push, pull_request, delete]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror
+        uses: yesolutions/mirror-action@master
+        with:
+          REMOTE: "https://codeberg.org/amarx/ZEReader.git"
+          GIT_USERNAME: "amarx"
+          GIT_PASSWORD: ${{ secrets.CODEBERG_TOKEN }}
