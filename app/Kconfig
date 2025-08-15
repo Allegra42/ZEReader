@@ -4,10 +4,6 @@
 
 menu "ZEReader"
 
-config PIXEL_FORMAT_MONO10
-        bool "Reverse display colors"
-        default y
-
 # Logging
 # use template to create log level configurations
 module = ZEREADER

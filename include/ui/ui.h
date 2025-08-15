@@ -23,9 +23,18 @@
 
 extern const struct device *display_dev;
 
+#define BT_OK   "ok"
+#define BT_EXIT "exit"
+#define BT_NEXT "next"
+#define BT_PREV "prev"
+#define BT_UP   "up"
+#define BT_DOWN "down"
+#define BT_MENU "books"
+#define BT_NONE " "
+
 /**
  * @brief Setup and configure the control buttons.
- * 
+ *
  * @param[in] context The UI context.
  */
 void zereader_setup_control_buttons(context_t *context);

@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <lib/epub/epub.h>
-#include <lib/sd/sd.h>
+#include <epub/epub.h>
+#include <sd/sd.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(epub, CONFIG_ZEREADER_LOG_LEVEL);
@@ -97,7 +97,6 @@ int epub_write_current_book_state()
 
     size_t to_write;
     char state_string[500];
-    // memset(state_string, 0, 500 * sizeof(state_string[0]));
 
     sprintf(state_string, "%s\n%d\n%d\n", current_book->state.title, current_book->state.chapter, current_book->state.file_offset);
     to_write = strlen(state_string);
@@ -116,9 +115,9 @@ void epub_get_current_book_state()
     char buf[size];
     size_t offset = 0;
 
-    char *title;
-    size_t chapter;
-    size_t ofs;
+    char *title = 0;
+    size_t chapter = 0;
+    size_t ofs = 0;
 
     sd_read_chunk(STATE_FILE, &offset, buf, &size);
     LOG_DBG("Current state:\n %s", buf);
@@ -215,6 +214,7 @@ char *epub_content_opf_metadata_get_element(const char *search_tag, const char *
 
         token = strtok(NULL, delim);
     }
+    return NULL;
 }
 
 char *epub_container_xml_get_rootpath(const char *folder, const char *filepath)
@@ -234,10 +234,9 @@ char *epub_container_xml_get_rootpath(const char *folder, const char *filepath)
             LOG_DBG("Token: %s", token);
 
             char *rootpath = (char *)malloc(5 + strlen(token) - 12 + strlen(folder) + 1);
-            // memset(rootpath, 0, sizeof(rootpath));
             memcpy(rootpath, "/SD:/", 5);
             strncat(rootpath, folder, strlen(folder));
-            strncat(rootpath, "/", 1);
+            strcat(rootpath, "/");
             strncat(rootpath, token + 11, strlen(token) - 12);
 
             return rootpath;
@@ -287,7 +286,6 @@ int epub_get_epub_rootfiles()
             struct fs_file_t f_obj;
 
             // Found folder, test if META-INF/container.xml exists
-            uint32_t path_len = strlen(entry.name) + strlen(container_xml + 1);
             book_path = sd_build_full_path(entry.name, container_xml, &ret);
 
             ret = sd_open(book_path, &f_obj);
@@ -431,8 +429,6 @@ int epub_prettify_page()
     char *token = strtok(current_book->page, delim);
     while (token)
     {
-        // LOG_DBG("Token: %s", token);
-
         // Handle <p *> </p>
         if (strstr(token, "</p") != 0)
         {
@@ -535,6 +531,7 @@ int epub_get_next_chapter()
             epub_get_next_chapter();
         }
     }
+    return 0;
 }
 
 int epub_get_chapter(size_t index)
@@ -561,6 +558,7 @@ int epub_get_chapter(size_t index)
         // current_book->state.chapter++;
         return epub_get_chapter(index - 1);
     }
+    return 0;
 }
 
 int epub_get_prev_chapter()
@@ -583,12 +581,12 @@ int epub_get_prev_chapter()
         }
         else
         {
-            // TODO does not work as expected right now
             LOG_DBG("Opening previous file %s", current_book->current_chapter->chapter->path);
             sd_tell_end_offset(current_book->current_chapter->chapter->path, &current_book->state.file_offset);
             LOG_DBG("End offset of the prev chapter: %d", current_book->state.file_offset);
         }
     }
+    return 0;
 }
 
 int epub_fetch_next_page_chunk()
@@ -692,7 +690,7 @@ int epub_open_book(book_entry_t *book)
     current_book->root_dir = book->root_dir;
 
     epub_parse_chapter_files(book->entry_point);
-    epub_get_next_chapter();
+    return epub_get_next_chapter();
 }
 
 int epub_restore_book()
@@ -712,7 +710,7 @@ int epub_restore_book()
     epub_parse_chapter_files(book->entry_point);
     epub_get_chapter_entry(current_book->state.chapter);
 
-    epub_get_chapter(current_book->state.chapter);
+    return epub_get_chapter(current_book->state.chapter);
 }
 
 int epub_initialize()
@@ -727,14 +725,14 @@ int epub_initialize()
         return ret;
     }
 
-    LOG_DBG("Get E-Book rootfiles.");
-    epub_get_epub_rootfiles();
+    ret = epub_get_epub_rootfiles();
+        if (ret)
+    {
+        LOG_ERR("Fetching the EPUB rootfiles failed.");
+        return ret;
+    }
 
-    LOG_DBG("Get authors and titles");
-    // ret =
     epub_get_authors_and_titles();
-    // if (ret) {
-    //     LOG_ERR("Parse book titles failed");
-    //     return ret;
-    // }
+
+    return ret;
 }
