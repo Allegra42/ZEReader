@@ -10,7 +10,18 @@
 #include <string.h>
 
 #include <ui/ui.h>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wbidi-chars"
+#endif /* __GNUC__ */
+
 #include <ui/fonts/notoserif_14.h>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif /* __GNUC__ */
+
 #include <ui/logo/zereaderlogomarx.h>
 
 #include <zephyr/logging/log.h>
