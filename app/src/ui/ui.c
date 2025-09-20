@@ -6,6 +6,9 @@
 
 #include <epub/epub.h>
 
+#include <stdio.h>
+#include <string.h>
+
 #include <ui/ui.h>
 #include <ui/fonts/notoserif_14.h>
 #include <ui/logo/zereaderlogomarx.h>
