@@ -6,7 +6,11 @@ Contributing
 ============
 
 .. attention::
-    Due to the early state in hardware and software development,
-    ZEReader and ZEReader-KiCad are not yet open for external contibution.
+    Contibutions to ZEReader are very welcome in general!
 
-    Nevertheless, you can open up issues, mail me or ping me on social media.
+    Please notice, due to the very early state in hardware and software
+    development, the internal architecture will substantially change
+    during the next months.
+
+    If you plan to contribute, please contact me via mail or social media
+    to make sure your work is not in vain.
