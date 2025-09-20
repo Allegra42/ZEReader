@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-zephyr_syscall_include_directories(include)
-zephyr_include_directories(include)
+# zephyr_syscall_include_directories(include)
+# zephyr_include_directories(include)
 
 add_subdirectory(lib)

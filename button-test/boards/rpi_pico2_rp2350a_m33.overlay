@@ -1,0 +1,31 @@
+/*
+ * SPDX-FileCopyrightText: 2025 Anna-Lena Marx <mail@marx.engineer>
+ *
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/lvgl/lvgl.h>
+
+/ {
+  aliases {
+    pwrpin = &devicepower;
+    onoff = &button_onoff;
+  };
+
+  powerpin {
+    compatible = "gpio-leds";
+    devicepower: devpwr {
+      gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+    };
+    button_onoff: button_onoff {
+      gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+    };
+  };
+
+};
+
+&spi0 {
+  status = "okay";
+};
+
