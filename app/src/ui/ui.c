@@ -80,7 +80,7 @@ void zereader_show_bookmenu(context_t *context)
 	while (books != NULL)
 	{
 		LOG_DBG("NR: %d - %s - %s - %s - %s", books->book->number, books->book->title, books->book->author, books->book->root_dir, books->book->entry_point);
-		snprintf(book_entry, 49, "%d - %s - %s", books->book->number, books->book->author, books->book->title);
+		snprintf(book_entry, 49, "%zu - %s - %s", books->book->number, books->book->author, books->book->title);
 		LOG_DBG("book_entry: %s", book_entry);
 		strcat(book_entry, "\n");
 		strcat(book_list, book_entry);

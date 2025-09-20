@@ -103,7 +103,7 @@ int epub_write_current_book_state()
     size_t to_write;
     char state_string[500];
 
-    sprintf(state_string, "%s\n%d\n%d\n", current_book->state.title, current_book->state.chapter, current_book->state.file_offset);
+    sprintf(state_string, "%s\n%zu\n%zu\n", current_book->state.title, current_book->state.chapter, current_book->state.file_offset);
     to_write = strlen(state_string);
 
     int ret = sd_write_chunk(STATE_FILE, state_string, &to_write);
