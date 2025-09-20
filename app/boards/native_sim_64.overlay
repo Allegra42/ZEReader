@@ -1,0 +1,69 @@
+// SPDX-FileCopyrightText: 2025 Florian Limberger <flo@purplekraken.com>
+//
+// SPDX-License-Identifier: MPL-2.0
+
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/lvgl/lvgl.h>
+
+&flashcontroller0 {
+	reg = <0x00000000 DT_SIZE_K(1024 * 100)>;
+};
+
+&flash0 {
+	reg = <0x00000000 DT_SIZE_K(1024 * 100)>;
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		flashdisk_partition: partition@0 {
+			reg = <0x00000000 DT_SIZE_K(1024 * 100)>;
+		};
+	};
+};
+
+&sdl_dc {
+	compatible = "zephyr,sdl-dc";
+	height = <480>;
+	width = <800>;
+};
+
+/ {
+	keys: keys {
+		compatible = "gpio-keys";
+		button1: button1 {
+			gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;
+			zephyr,code = <INPUT_KEY_1>;
+		};
+
+		button2: button2 {
+			gpios = <&gpio0 3 GPIO_ACTIVE_LOW>;
+			zephyr,code = <INPUT_KEY_2>;
+		};
+
+		button3: button3 {
+			gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
+			zephyr,code = <INPUT_KEY_3>;
+		};
+
+		button4: button4 {
+			gpios = <&gpio0 5 GPIO_ACTIVE_LOW>;
+			zephyr,code = <INPUT_KEY_4>;
+		};
+	};
+
+	lvgl_button_input: lvgl_button_input {
+		compatible = "zephyr,lvgl-button-input";
+		input = <&keys>;
+		input-codes = <INPUT_KEY_1 INPUT_KEY_2 INPUT_KEY_3 INPUT_KEY_4>;
+		coordinates = <10 470>, <360 470>, <450 470>, <770 470>;
+	};
+
+	sdcard_emulation: sdcard_emulation {
+		compatible = "zephyr,flash-disk";
+		partition = <&flashdisk_partition>;
+		disk-name = "SD"; /* this is the same name as the SD card reader */
+		cache-size = <4096>;
+	};
+};

@@ -113,6 +113,36 @@ With Blackmagic Debug Probe using the SWD interface:
   `break <full/source/code/file/path>:<linenumber>`
 - step through / step in with GDB commands (next/n, step in/si, ..)
 
+## Native Simulator
+
+Note: the Zephyr native simulator only works on Linux.
+
+The native simulator uses the flash simulator to provide storage.
+It creates a 100 MB file named `flash.bin`, which contains a FAT file system.
+This replaces the SD card.
+
+To build for the native simulator, build the app for the `native_sim/native/64` board.
+The run it from the build directory: `./build/zephyr/zephyr.exe`.
+
+The flash backing file can either be created manually beforehand,
+or on the first run of the emulator.
+To put data onto the simulated SD card,
+mount the file on the host and copy the data into it:
+
+```
+sudo mount -o loop flash.bin /mnt
+sudo cp -r my-book /mnt
+sudo umount /mnt
+```
+
+Alternatively, if the FUSE development headers are installed,
+FUSE access to the simulated storage can be enabled:
+
+```
+west build -b native_sim/native/64 app -- -DCONFIG_FUSE_FS_ACCESS=y
+cp -r my-book flash/SD\:/
+```
+
 ## Current state
 This is still a work-in-process.
 The firmware shows a proof-of-concept that reading EPUBs as they are is possible with the available resources of a cheap microcontroller unit like the RP2040/RP2350.
