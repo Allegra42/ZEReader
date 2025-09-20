@@ -47,11 +47,13 @@ int main(void)
 	display_blanking_off(display_dev);
 
 	epub_initialize();
-	epub_restore_book();
+	int err = epub_restore_book();
 
 	zereader_clean_page();
 
-	zereader_print_current_page();
+	if (err == 0) {
+		zereader_print_current_page();
+	}
 
 	lv_timer_handler();
 

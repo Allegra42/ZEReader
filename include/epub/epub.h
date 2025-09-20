@@ -274,8 +274,10 @@ int epub_write_current_book_state();
 
 /**
  * @brief Restore the book state from a state file on the inserted SD card.
+ *
+ * @returns A freshly allocated current book
  */
-void epub_get_current_book_state();
+current_book_t *epub_get_current_book_state();
 
 /** @} */
 #endif
