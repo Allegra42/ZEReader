@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2025 Anna-Lena Marx <mail@marx.engineer>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+diff --git i/modules/lvgl/lvgl_display_mono.c w/modules/lvgl/lvgl_display_mono.c
+index 069a0eea28b..4d7859da479 100644
+--- i/modules/lvgl/lvgl_display_mono.c
++++ w/modules/lvgl/lvgl_display_mono.c
+@@ -92,16 +92,16 @@ void lvgl_flush_cb_mono(lv_display_t *display, const lv_area_t *area, uint8_t *p
+ 
+ 	lvgl_transform_buffer(&px_map, w, h, &data->cap);
+ 
+-	if (is_epd && !data->blanking_on && !is_last) {
+-		/*
+-		 * Turn on display blanking when using an EPD
+-		 * display. This prevents updates and the associated
+-		 * flicker if the screen is rendered in multiple
+-		 * steps.
+-		 */
+-		display_blanking_on(display_dev);
+-		data->blanking_on = true;
+-	}
++	// if (is_epd && !data->blanking_on && !is_last) {
++	// 	/*
++	// 	 * Turn on display blanking when using an EPD
++	// 	 * display. This prevents updates and the associated
++	// 	 * flicker if the screen is rendered in multiple
++	// 	 * steps.
++	// 	 */
++	// 	display_blanking_on(display_dev);
++	// 	data->blanking_on = true;
++	// }
+ 
+ 	struct display_buffer_descriptor desc = {
+ 		.buf_size = (w * h) / 8U,

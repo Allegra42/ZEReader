@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Anna-Lena Marx <mail@marx.engineer>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+config BOARD_ZEREADER_REV1
+    select SOC_RP2350A_M33 if BOARD_ZEREADER_REV1

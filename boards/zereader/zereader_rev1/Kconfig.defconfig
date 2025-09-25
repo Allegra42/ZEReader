@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2025 Anna-Lena Marx <mail@marx.engineer>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+if BOARD_ZEREADER_REV1
+
+config USB_SELF_POWERED
+	default n
+
+endif # BOARD_ZEREADER_REV1
