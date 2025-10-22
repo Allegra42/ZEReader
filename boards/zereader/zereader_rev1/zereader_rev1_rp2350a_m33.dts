@@ -1,0 +1,17 @@
+// SPDX-FileCopyrightText: 2025 Anna-Lena Marx <mail@marx.engineer>
+//
+// SPDX-License-Identifier: MPL-2.0
+
+/dts-v1/;
+
+/* The build system assumes that there's a cpucluster-specific file.
+ *
+ * This file provides composition of the device tree:
+ * 1. The common features of the SoC
+ * 2. Core-specific configuration.
+ * 3. Board-specific configuration.
+ */
+#include <raspberrypi/rpi_pico/rp2350a.dtsi>
+#include <raspberrypi/rpi_pico/m33.dtsi>
+
+#include "zereader_rev1.dtsi"

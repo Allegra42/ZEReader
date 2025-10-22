@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2025 Anna-Lena Marx <mail@marx.engineer>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+board:
+  name: zereader_rev1
+  full_name: ZEReader rev 1
+  vendor: zereader
+  socs:
+    - name: rp2350a
