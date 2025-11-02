@@ -26,16 +26,16 @@ The firmware is currently in a really early PoC stage.
 Nevertheless, due to Zephyr, it is easily portable and adaptable to different hardware platforms
 which provide the essential components and a proper device tree (overlay) configuration.
 
-## Basic Hardware Components
-For developing and testing the following basic components are used:
+## ZEReader Hardware
+The ZEReader firmware is, based on Zephyr, highly flexible and can be adopted to a wide range of different hardware with a proper device tree (overlay).
+In general, the development and testing is based on the following components:
 
 - Raspberry Pi Pico 1/2
 - Waveshare ePaper Display 7,5" (Gooddisplay GDEW075T7, GDEY075T7) with UC8179 controller
 - SD Card Reader (SPI)
 - 4 Buttons for navigation
 
-With proper device tree (overlay) and maybe some prj.conf or currently even code configurations,
-the firmware should be easily adaptable to other microcontrollers and/or displays.
+The ZEReader PCB itself is developed in a seperated git repository available [here](https://github.com/Allegra42/ZEReader-KiCad).
 
 ## Setup for local development
 ```
@@ -62,14 +62,19 @@ source .venv/bin/activate
 cd ZEReader
 ```
 
-### Build for Raspberry Pi Pico 1
+### Build for Raspberry Pi Pico 1 using a Device Tree Overlay
 ```
 west build -b rpi_pico app -p always
 ```
 
-### Build for Raspberry Pi Pico 2
+### Build for Raspberry Pi Pico 2 using a Device Tree Overlay
 ```
 west build -b rpi_pico2/rp2350a/m33 app -p always
+```
+
+### Build for the ZEReader Rev1 Board
+```
+west build -b zereader_rev1/rp2350a/m33 app -p always
 ```
 
 ### Other useful build commands
