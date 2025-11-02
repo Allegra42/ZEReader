@@ -2,5 +2,5 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-add_subdirectory(epub)
-add_subdirectory(sd)
+zephyr_library()
+zephyr_library_sources(epub.c)
