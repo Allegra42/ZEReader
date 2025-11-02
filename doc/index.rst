@@ -22,6 +22,7 @@ this hackable and customizable platform.
    docs/about
    docs/getting-started
    docs/debugging
+   docs/emulator
    docs/contributing
    
 
