@@ -30,19 +30,26 @@ Always source the venv environment first!
 
     cd ZEReader
 
-Raspberry Pi Pico 1
+Raspberry Pi Pico 1 with a Device Tree Overlay
 ~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
     west build -b rpi_pico app -p
 
-Raspberry Pi Pico 2
+Raspberry Pi Pico 2 with a Device Tree Overlay
 ~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
     west build -b rpi_pico2/rp2350a/m33 app -p
+
+ZEReader PCB based on Pico 2
+~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    west build -b zereader_rev1/rp2350a/m33 app -p always
 
 
 Flash the Microcontroller
@@ -80,5 +87,4 @@ Update Zephyr and Zephyr-Modules
 .. code-block:: bash
 
     west update
-
 
