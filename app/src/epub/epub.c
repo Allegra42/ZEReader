@@ -93,12 +93,17 @@ book_list_t *epub_get_book_list()
 
 int epub_write_current_book_state()
 {
+    if (!current_book) {
+        LOG_DBG("No current book");
+        /* There is nothing to do, which is always successful */
+        return 0;
+    }
     LOG_DBG("Writing the book's state");
 
     size_t to_write;
     char state_string[500];
 
-    sprintf(state_string, "%s\n%d\n%d\n", current_book->state.title, current_book->state.chapter, current_book->state.file_offset);
+    sprintf(state_string, "%s\n%zu\n%zu\n", current_book->state.title, current_book->state.chapter, current_book->state.file_offset);
     to_write = strlen(state_string);
 
     int ret = sd_write_chunk(STATE_FILE, state_string, &to_write);
@@ -109,7 +114,7 @@ int epub_write_current_book_state()
     return ret;
 }
 
-void epub_get_current_book_state()
+current_book_t *epub_get_current_book_state()
 {
     size_t size = 500;
     char buf[size];
@@ -119,7 +124,10 @@ void epub_get_current_book_state()
     size_t chapter = 0;
     size_t ofs = 0;
 
-    sd_read_chunk(STATE_FILE, &offset, buf, &size);
+    int err = sd_read_chunk(STATE_FILE, &offset, buf, &size);
+    if (err != 0) {
+        return NULL;
+    }
     LOG_DBG("Current state:\n %s", buf);
 
     char *token = strtok(buf, "\n");
@@ -143,11 +151,14 @@ void epub_get_current_book_state()
         LOG_DBG("Offset: %d", ofs);
     }
 
-    free(current_book);
-    current_book = (current_book_t *)malloc(sizeof(current_book_t));
-    current_book->state.title = strdup(title);
-    current_book->state.chapter = chapter;
-    current_book->state.file_offset = ofs;
+    current_book_t *current_book = malloc(sizeof(current_book_t));
+    if (current_book) {
+        current_book->state.title = strdup(title);
+        current_book->state.chapter = chapter;
+        current_book->state.file_offset = ofs;
+    }
+
+    return current_book;
 }
 
 chapter_entry_t *epub_add_chapter_entry()
@@ -611,15 +622,15 @@ int epub_fetch_next_page_chunk()
 
 char *epub_get_next_page()
 {
-
-    if (epub_fetch_next_page_chunk() == 0)
-    {
-        memset(current_book->pretty_page, 0, sizeof(current_book->pretty_page));
-        epub_prettify_page();
-        LOG_DBG("Pretty page: %s", current_book->pretty_page);
-        return current_book->pretty_page;
+    if (current_book) {
+        if (epub_fetch_next_page_chunk() == 0) {
+            memset(current_book->pretty_page, 0, sizeof(current_book->pretty_page));
+            epub_prettify_page();
+            LOG_DBG("Pretty page: %s", current_book->pretty_page);
+            return current_book->pretty_page;
+        }
     }
-    LOG_DBG("Can't get page");
+    LOG_DBG("No current book");
     return "";
 }
 
@@ -662,15 +673,15 @@ int epub_fetch_prev_page_chunk()
 
 char *epub_get_prev_page()
 {
-
-    if (epub_fetch_prev_page_chunk() == 0)
-    {
-        memset(current_book->pretty_page, 0, sizeof(current_book->pretty_page));
-        epub_prettify_page();
-        LOG_DBG("Pretty page: %s", current_book->pretty_page);
-        return current_book->pretty_page;
+    if (current_book) {
+        if (epub_fetch_prev_page_chunk() == 0) {
+            memset(current_book->pretty_page, 0, sizeof(current_book->pretty_page));
+            epub_prettify_page();
+            LOG_DBG("Pretty page: %s", current_book->pretty_page);
+            return current_book->pretty_page;
+        }
     }
-    LOG_DBG("Can't get page");
+    LOG_DBG("No current book");
     return "";
 }
 
@@ -697,7 +708,15 @@ int epub_restore_book()
 {
     book_entry_t *book = NULL;
 
-    epub_get_current_book_state();
+    if (current_book) {
+        free(current_book);
+    }
+    current_book = epub_get_current_book_state();
+    if (!current_book) {
+        LOG_INF("No current book state found.");
+        return -ENOENT;
+    }
+
     LOG_DBG("Restore title %s", current_book->state.title);
     book = epub_get_book_entry_for_title(current_book->state.title);
 

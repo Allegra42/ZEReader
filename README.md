@@ -113,6 +113,56 @@ With Blackmagic Debug Probe using the SWD interface:
   `break <full/source/code/file/path>:<linenumber>`
 - step through / step in with GDB commands (next/n, step in/si, ..)
 
+## Emulator
+
+Note: the Zephyr native simulator only works on Linux.
+
+To build the emulator,
+build the ZEReader app for the `native_sim` board:
+
+```
+west build -b native_sim/native/64 app
+```
+
+To run the emluator, execute this command:
+
+```
+./build/zephyr/zephyr.exe
+```
+
+The native simulator uses emulated flash to provide storage,
+which replaces the SD card from the actual board.
+This emulated storage is backed by a 100 MB file named `flash.bin`,
+located in the directory where the emulator is run.
+If this file does not exist,
+the emulator creates it.
+To put data onto the simulated SD card,
+mount the file on the host and copy the data into it:
+
+```
+sudo mount -o loop flash.bin /mnt
+sudo cp -r my-book /mnt
+sudo umount /mnt
+```
+
+Alternatively, if the FUSE development headers are installed,
+FUSE access to the simulated storage can be enabled:
+
+```
+west build -b native_sim/native/64 app -- -DCONFIG_FUSE_FS_ACCESS=y
+```
+
+When the emulator is running,
+it mounts the simulated SD card on the directory `flash/SD:`,
+so the book can be copied there:
+
+```
+cp -r my-book flash/SD\:/
+```
+
+In any case,
+the emulator needs to be restarted after new books are added to the simulated SD card.
+
 ## Current state
 This is still a work-in-process.
 The firmware shows a proof-of-concept that reading EPUBs as they are is possible with the available resources of a cheap microcontroller unit like the RP2040/RP2350.

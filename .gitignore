@@ -18,3 +18,7 @@ __pycache__
 /.vscode/
 /doc/_build_doxygen
 /doc/_build_sphinx
+
+# files from native_sim flash simulation
+/flash
+/flash.bin
