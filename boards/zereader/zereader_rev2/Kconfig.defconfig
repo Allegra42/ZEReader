@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2025 Anna-Lena Marx <mail@marx.engineer>
+#
+# SPDX-License-Identifier: MPL-2.0
+
+if BOARD_ZEREADER_REV2
+
+config USB_SELF_POWERED
+	default n
+
+config BUTTON_ONOFF
+	bool "Is the ZEReader pcb equipped with an of/off push button?"
+	default y
+
+endif # BOARD_ZEREADER_REV2

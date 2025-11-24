@@ -42,12 +42,22 @@
 		};
 	};
 
-	spi1_default: spi1_default {
+	spi1_zereader_v1: spi1_zereader_v1 {
 		group1 {
 			pinmux = <SPI1_CSN_P13>, <SPI1_SCK_P10>, <SPI1_TX_P11>;
 		};
 		group2 {
 			pinmux = <SPI1_RX_P12>;
+			input-enable;
+		};
+	};
+
+	spi1_zereader_v2: spi1_zereader_v2 {
+		group1 {
+			pinmux = <SPI1_CSN_P9>, <SPI1_SCK_P10>, <SPI1_TX_P11>;
+		};
+		group2 {
+			pinmux = <SPI1_RX_P8>;
 			input-enable;
 		};
 	};

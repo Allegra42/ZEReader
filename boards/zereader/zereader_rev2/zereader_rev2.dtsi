@@ -9,8 +9,13 @@
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 #include <zephyr/dt-bindings/lvgl/lvgl.h>
 
-#include "zereader_rev1-pinctrl.dtsi"
+#include "zereader_rev2-pinctrl.dtsi"
 
+// TODO
+// Not yet configured:
+// SD_DAT1 		-> GP6
+// SD_DAT2 		-> GP7
+// SD_DETECT 	-> GP5
 / {
 	chosen {
 		zephyr,sram = &sram0;
@@ -23,6 +28,7 @@
 
 	aliases {
 		watchdog0 = &wdt0;
+		devicestatecontrol = &powercontrol;
 	};
 
 	mipi_dbi_waveshare_epaper_gdew075t7 {
@@ -114,22 +120,22 @@
 	keys: keys {
 		compatible = "gpio-keys";
 		button1: button1 {
-			gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
 			zephyr,code = <INPUT_KEY_1>;
 		};
 
 		button2: button2 {
-			gpios = <&gpio0 3 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
 			zephyr,code = <INPUT_KEY_2>;
 		};
 
 		button3: button3 {
-			gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio0 13 GPIO_ACTIVE_LOW>;
 			zephyr,code = <INPUT_KEY_3>;
 		};
 
 		button4: button4 {
-			gpios = <&gpio0 5 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
 			zephyr,code = <INPUT_KEY_4>;
 		};
 	};
@@ -140,6 +146,30 @@
 		input-codes = <INPUT_KEY_1 INPUT_KEY_2 INPUT_KEY_3 INPUT_KEY_4>;
 		coordinates = <10 470>, <360 470>, <450 470>, <770 470>;
 	};
+
+	powerpin: powerpin {
+    compatible = "gpio-leds";
+    powercontrol: powercontrol {
+      gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
+    };
+  };
+
+  onoffkey: onoffkey {
+    compatible = "gpio-keys";
+    button_onoff: button_onoff {
+      gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
+      zephyr,code = <INPUT_KEY_A>;
+    };
+  };
+
+  longpress: longpress {
+    input = <&onoffkey>;
+    compatible = "zephyr,input-longpress";
+    input-codes = <INPUT_KEY_A>;
+    // short-codes = <INPUT_KEY_B>;
+    long-codes = <INPUT_KEY_X>;
+    long-delay-ms = <4000>;
+  };
 };
 
 &flash0 {
@@ -166,11 +196,11 @@ gpio0_lo: &gpio0 {
 
 &spi1 {
 	clock-frequency = <DT_FREQ_M(8)>;
-	pinctrl-0 = <&spi1_zereader_v1>;
+	pinctrl-0 = <&spi1_zereader_v2>;
 	pinctrl-names = "default";
 	status = "okay";
 
-	cs-gpios = <&gpio0 13 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
 	sdhc0: sdhc@0 {
 		compatible = "zephyr,sdhc-spi-slot";
 		reg = <0>;
