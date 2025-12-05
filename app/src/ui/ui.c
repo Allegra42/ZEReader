@@ -25,11 +25,25 @@
 #include <ui/logo/zereaderlogomarx.h>
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(ui, CONFIG_ZEREADER_LOG_LEVEL);
 
+#define BATTERY_UPDATE_INTERVAL_MS 10000 // Update every 10 seconds
+#define BAT_MIN_MV 3300									 // 0% charge (3.3V)
+#define BAT_MAX_MV 4200									 // 100% charge (4.2V)
+#define BAT_CHARGER_MV 5000							 // Threshold to detect charger (approx 5V)
+
+LOG_MODULE_REGISTER(ui, CONFIG_ZEREADER_LOG_LEVEL);
 LV_FONT_DECLARE(notoserif_14);
 
-const struct device *display_dev;
+const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+
+// Currently, only one ADC channel is defined in the device tree.
+// Thus, the ADC channel 3, bound to 1/3 VSYS is indexed 0.
+// static const struct adc_dt_spec
+const struct adc_dt_spec adc_chan3_vsys = ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 0);
+
+static lv_obj_t *bat_label;
+
+static lv_timer_t *bat_timer;
 
 static lv_obj_t *button_1;
 static lv_obj_t *button_1_label;
@@ -55,6 +69,80 @@ uint8_t page_ctr;
 
 void zereader_print_prev_page();
 void zereader_print_next_page();
+
+static uint8_t get_battery_percentage(int32_t battery_mv)
+{
+	if (battery_mv >= BAT_MAX_MV)
+		return 100;
+	if (battery_mv <= BAT_MIN_MV)
+		return 0;
+
+	return (uint8_t)((battery_mv - BAT_MIN_MV) * 100 / (BAT_MAX_MV - BAT_MIN_MV));
+}
+
+static const char *get_battery_symbol(uint8_t percentage)
+{
+	if (percentage > 90)
+		return LV_SYMBOL_BATTERY_FULL;
+	if (percentage > 70)
+		return LV_SYMBOL_BATTERY_3;
+	if (percentage > 50)
+		return LV_SYMBOL_BATTERY_2;
+	if (percentage > 20)
+		return LV_SYMBOL_BATTERY_1;
+
+	return LV_SYMBOL_BATTERY_EMPTY;
+}
+
+static void update_battery_cb(lv_timer_t *timer)
+{
+	int err;
+	int32_t val_mv;
+	uint16_t buf;
+
+	struct adc_sequence sequence = {
+			.buffer = &buf,
+			/* buffer size in bytes, not number of samples */
+			.buffer_size = sizeof(buf),
+	};
+
+	(void)adc_sequence_init_dt(&adc_chan3_vsys, &sequence);
+
+	err = adc_read_dt(&adc_chan3_vsys, &sequence);
+	if (err < 0)
+	{
+		LOG_ERR("ADC 3 (VSYS) read failed: (%d)\n", err);
+		return;
+	}
+
+	val_mv = (int32_t)buf;
+	LOG_DBG("%" PRId32, val_mv);
+
+	if (adc_raw_to_millivolts_dt(&adc_chan3_vsys, &val_mv) == 0)
+	{
+		val_mv = (val_mv * 3);
+		LOG_DBG("ADC reading - %s, channel %d: raw: %" PRId32 " mV", adc_chan3_vsys.dev->name, adc_chan3_vsys.channel_id, val_mv);
+
+		val_mv = val_mv - 50;
+		val_mv /= 10;
+
+		val_mv *= 10;
+		LOG_DBG("Battery voltage rounded: %" PRId32 " mV", val_mv);
+	}
+
+	if (val_mv >= BAT_CHARGER_MV)
+	{
+		// Only works for the Pi Pico's USB connector.
+		// Connect the BQ25xx's charging indicator in the next revision
+		// for a proper charging detection.
+		lv_label_set_text(bat_label, "USB Connected " LV_SYMBOL_CHARGE);
+	}
+	else
+	{
+		uint8_t percentage = get_battery_percentage(val_mv);
+		lv_label_set_text_fmt(bat_label, "%d%% %s", percentage, get_battery_symbol(percentage));
+	}
+}
 
 static void book_roller_event_handler(lv_event_t *e)
 {
@@ -238,9 +326,56 @@ void zereader_setup_control_buttons(context_t *context)
 	lv_obj_center(button_4_label);
 }
 
+void zereader_setup_statusbar()
+{
+	bat_label = lv_label_create(lv_screen_active());
+	lv_obj_align(bat_label, LV_ALIGN_TOP_RIGHT, -40, 5);
+	lv_label_set_text(bat_label, "--% " LV_SYMBOL_BATTERY_EMPTY); // Initial State
+
+	bat_timer = lv_timer_create(update_battery_cb, BATTERY_UPDATE_INTERVAL_MS, NULL);
+
+	lv_timer_ready(bat_timer);
+}
+
+int zereader_initialize_peripherals()
+{
+	// Initialize the choosen zephyr,display device
+	// -> Make the device tree description available for the software part
+	if (!device_is_ready(display_dev))
+	{
+		LOG_ERR("Device not ready, aborting...");
+		return -1;
+	}
+
+	// Make the FIRST ok zephyr,lvgl-button-input node available to the software part
+	static const struct device *lvgl_btn_dev;
+	lvgl_btn_dev = DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_lvgl_button_input));
+	if (!device_is_ready(lvgl_btn_dev))
+	{
+		LOG_ERR("Device not ready, aborting...");
+		return -2;
+	}
+
+	/* Configure channels individually prior to sampling. */
+	if (!adc_is_ready_dt(&adc_chan3_vsys))
+	{
+		printk("ADC controller device %s not ready\n", adc_chan3_vsys.dev->name);
+		return -3;
+	}
+
+	if (adc_channel_setup_dt(&adc_chan3_vsys) < 0)
+	{
+		printk("Could not setup channel #3 (ADC VSYS)\n");
+		return -4;
+	}
+
+	return 0;
+}
+
 void zereader_setup_page()
 {
 	LOG_DBG("Setup page");
+
 	lv_style_init(&font_style);
 	lv_style_set_text_font(&font_style, &notoserif_14);
 
@@ -248,7 +383,7 @@ void zereader_setup_page()
 	lv_obj_add_style(text_area, &font_style, 0);
 
 	lv_obj_set_x(text_area, 10);
-	lv_obj_set_y(text_area, 20);
+	lv_obj_set_y(text_area, 23);
 	lv_obj_set_width(text_area, 780);
 	lv_obj_set_height(text_area, 440);
 
@@ -322,4 +457,9 @@ void zereader_clean_logo()
 		lv_obj_del(logo);
 		logo = NULL;
 	}
+}
+
+void zereader_display_blanking_off()
+{
+	display_blanking_off(display_dev);
 }

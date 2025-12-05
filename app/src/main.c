@@ -39,24 +39,6 @@ int main(void)
 
 	LOG_DBG("ZEReader is starting... %s\n", CONFIG_BOARD_TARGET);
 
-	// Initialize the choosen zephyr,display device
-	// and make the device tree description available for the software part.
-	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
-	if (!device_is_ready(display_dev))
-	{
-		LOG_ERR("Device 'display_dev' is not ready, aborting...");
-		return 0;
-	}
-
-	// Make the FIRST ok zephyr,lvgl-button-input node available to the software part
-	static const struct device *lvgl_btn_dev;
-	lvgl_btn_dev = DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_lvgl_button_input));
-	if (!device_is_ready(lvgl_btn_dev))
-	{
-		LOG_ERR("Device 'lvgl_btn_dev' is not ready, aborting...");
-		return 0;
-	}
-
 #if defined(CONFIG_BUTTON_ONOFF)
 	LOG_DBG("Button On/Off configured!");
 	if (!gpio_is_ready_dt(&powercontrol_pin))
@@ -80,7 +62,14 @@ int main(void)
 
 	context_t context = READING;
 
+	if (zereader_initialize_peripherals() < 0)
+	{
+		LOG_ERR("Setup peripherals failed!");
+		return 0;
+	}
+
 	zereader_setup_page();
+	zereader_setup_statusbar();
 	zereader_setup_control_buttons(&context);
 	epub_initialize();
 
@@ -99,7 +88,8 @@ int main(void)
 
 	zereader_show_logo();
 	lv_timer_handler();
-	display_blanking_off(display_dev);
+
+	zereader_display_blanking_off();
 	zereader_clean_page();
 
 	error = epub_restore_book();
