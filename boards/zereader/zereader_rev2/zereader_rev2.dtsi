@@ -31,6 +31,10 @@
 		devicestatecontrol = &powercontrol;
 	};
 
+	zephyr,user {
+		io-channels = <&adc 3>;
+	};
+
 	mipi_dbi_waveshare_epaper_gdew075t7 {
 		compatible = "zephyr,mipi-dbi-spi";
 		spi-dev = <&spi0>; //spi@0 -> GPIO 16-19
@@ -229,9 +233,19 @@ gpio0_lo: &gpio0 {
 };
 
 &adc {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&adc_default>;
 	pinctrl-names = "default";
 	status = "okay";
+
+	channel@3{
+		reg = <3>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
 };
 
 &pwm {
