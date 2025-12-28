@@ -93,7 +93,8 @@ book_list_t *epub_get_book_list()
 
 int epub_write_current_book_state()
 {
-    if (!current_book) {
+    if (!current_book)
+    {
         LOG_DBG("No current book");
         /* There is nothing to do, which is always successful */
         return 0;
@@ -101,7 +102,7 @@ int epub_write_current_book_state()
     LOG_DBG("Writing the book's state");
 
     size_t to_write;
-    char state_string[500];
+    char state_string[EPUB_STATE_STRING_SIZE];
 
     sprintf(state_string, "%s\n%zu\n%zu\n", current_book->state.title, current_book->state.chapter, current_book->state.file_offset);
     to_write = strlen(state_string);
@@ -116,18 +117,21 @@ int epub_write_current_book_state()
 
 current_book_t *epub_get_current_book_state()
 {
-    size_t size = 500;
-    char buf[size];
+    size_t buf_capacity = EPUB_STATE_STRING_SIZE;
+    char buf[buf_capacity + 1];
     size_t offset = 0;
+    size_t bytes_read = buf_capacity; // Initialize with capacity to read up to
 
     char *title = 0;
     size_t chapter = 0;
     size_t ofs = 0;
 
-    int err = sd_read_chunk(STATE_FILE, &offset, buf, &size);
-    if (err != 0) {
+    int err = sd_read_chunk(STATE_FILE, &offset, buf, &bytes_read);
+    if (err != 0)
+    {
         return NULL;
     }
+    buf[bytes_read] = '\0';
     LOG_DBG("Current state:\n %s", buf);
 
     char *token = strtok(buf, "\n");
@@ -152,7 +156,8 @@ current_book_t *epub_get_current_book_state()
     }
 
     current_book_t *current_book = malloc(sizeof(current_book_t));
-    if (current_book) {
+    if (current_book)
+    {
         current_book->state.title = strdup(title);
         current_book->state.chapter = chapter;
         current_book->state.file_offset = ofs;
@@ -220,7 +225,8 @@ char *epub_content_opf_metadata_get_element(const char *search_tag, const char *
         if (strstr(token, search_tag) != 0)
         {
             token[strlen(token) - len_search_tag] = 0;
-            return token;
+            char *heap_str = strdup(token);
+            return heap_str;
         }
 
         token = strtok(NULL, delim);
@@ -230,29 +236,56 @@ char *epub_content_opf_metadata_get_element(const char *search_tag, const char *
 
 char *epub_container_xml_get_rootpath(const char *folder, const char *filepath)
 {
-    size_t read_size = 350;
-    char *delim = " ";
-    char buffer[read_size];
-
+    size_t read_size = EPUB_CONTAINER_XML_READ_SIZE;
+    char buffer[read_size + 1];
     size_t offset = 0;
-    sd_read_chunk(filepath, &offset, buffer, &read_size);
-
-    char *token = strtok(buffer, delim);
-    while (token)
+    int ret = sd_read_chunk(filepath, &offset, buffer, &read_size);
+    if (ret != 0)
     {
-        if (strstr(token, "full-path") != 0)
+        LOG_ERR("Failed to read chunk from %s (error: %d)", filepath, ret);
+        return NULL;
+    }
+    buffer[read_size] = '\0';
+
+    char *full_path_attr = strstr(buffer, "full-path=");
+    if (full_path_attr != NULL)
+    {
+        char *path_start = strchr(full_path_attr, '"');
+        if (path_start != NULL)
         {
-            LOG_DBG("Token: %s", token);
+            path_start++; // Move past the opening quote
+            char *path_end = strchr(path_start, '"');
+            if (path_end != NULL)
+            {
+                int path_len = path_end - path_start;
+                if (path_len <= 0)
+                {
+                    return NULL; // Empty path
+                }
 
-            char *rootpath = (char *)malloc(5 + strlen(token) - 12 + strlen(folder) + 1);
-            memcpy(rootpath, "/SD:/", 5);
-            strncat(rootpath, folder, strlen(folder));
-            strcat(rootpath, "/");
-            strncat(rootpath, token + 11, strlen(token) - 12);
+                LOG_DBG("Found 'full-path' value: %.*s", path_len, path_start);
 
-            return rootpath;
+                // Calculate required size for rootpath: "/SD:/" + folder + "/" + path_value + null_terminator
+                size_t rootpath_len = strlen("/SD:/") + strlen(folder) + strlen("/") + path_len + 1;
+                char *rootpath = (char *)malloc(rootpath_len);
+                if (rootpath == NULL)
+                {
+                    LOG_ERR("Failed to allocate memory for rootpath");
+                    return NULL;
+                }
+
+                int written = snprintf(rootpath, rootpath_len, "/SD:/%s/%.*s", folder, path_len, path_start);
+                if (written < 0 || written >= rootpath_len)
+                {
+                    LOG_ERR("snprintf failed or truncated rootpath");
+                    free(rootpath);
+                    return NULL;
+                }
+
+                LOG_DBG("Constructed rootpath: %s", rootpath);
+                return rootpath;
+            }
         }
-        token = strtok(NULL, delim);
     }
     return NULL;
 }
@@ -302,7 +335,7 @@ int epub_get_epub_rootfiles()
             ret = sd_open(book_path, &f_obj);
             if (ret == 0)
             {
-                LOG_DBG("Found valid book %s", book_path);
+                LOG_DBG("Found valid book %s, %s", book_path, entry.name);
 
                 rootpath = epub_container_xml_get_rootpath(entry.name, book_path);
                 if (rootpath != NULL)
@@ -336,7 +369,7 @@ int epub_get_epub_rootfiles()
 
 void epub_get_authors_and_titles()
 {
-    size_t file_read_size = 800;
+    size_t file_read_size = EPUB_OPF_READ_SIZE;
     const char *search_creator = "</dc:creator";
     const char *search_title = "</dc:title";
     char *element;
@@ -346,10 +379,10 @@ void epub_get_authors_and_titles()
     {
         book_entry_t *book = current_elem->book;
         element = epub_content_opf_metadata_get_element(search_creator, book->entry_point, file_read_size);
-        book->author = strdup(element);
+        book->author = element;
 
         element = epub_content_opf_metadata_get_element(search_title, book->entry_point, file_read_size);
-        book->title = strdup(element);
+        book->title = element;
         current_elem = current_elem->next;
     }
 }
@@ -368,64 +401,107 @@ int epub_parse_chapter_files(const char *content_opf)
 {
     int ret = 0;
     size_t offset = 0;
-    size_t read_size = 800;
-    char buf[read_size];
-    char *delim = ">";
-    char *search_tag = "href=\"";
+    // Double the buffer size to accommodate for potential overflows during partial tag reads
+    static char parse_buffer[EPUB_PARSE_BUFFER_SIZE * 2];
+    static size_t current_buffer_len = 0;
+    static char temp_read_buf[EPUB_PARSE_BUFFER_SIZE];
+    const char *search_tag = "href=\"";
     uint16_t len_search_tag = strlen(search_tag);
 
-    while (read_size == 800)
+    while (true)
     {
-        ret = sd_read_chunk(content_opf, &offset, buf, &read_size);
-        if (ret)
+        size_t bytes_to_read = EPUB_PARSE_BUFFER_SIZE - current_buffer_len;
+        if (bytes_to_read > 0)
         {
-            LOG_ERR("Could parse chapters!");
-            return ret;
-        }
-
-        char *token = strtok(buf, delim);
-        while (token)
-        {
-            char *found_href = strstr(token, search_tag);
-            if (found_href != 0)
+            size_t read_count = bytes_to_read;
+            ret = sd_read_chunk(content_opf, &offset, temp_read_buf, &read_count);
+            if (ret != 0 && ret != -ENOENT)
             {
-                // href="Text/BD0B5209B23149EC818E6FE711A195F6.xhtml" id="x978-3-641-16998-5-36" media-type="application/xhtml+xml"
-                // By adding the length of href=", we get our start pointer
-                char *path = found_href + len_search_tag;
-
-                // The next occurrence of " is the end of the path
-                int path_len = char_get_index(path, '"');
-
-                if (path_len >= EPUB_FILE_LEN_MAX)
-                {
-                    LOG_ERR("Found path is too long");
-                    return -1;
-                }
-                else if (path_len < EPUB_FILE_LEN_MAX && path_len > 0)
-                {
-                    chapter_entry_t *chapter = epub_add_chapter_entry();
-                    chapter->path = (char *)malloc((5 + sizeof(current_book->root_dir) + 7 + path_len) * sizeof(char));
-                    strcpy(chapter->path, "/SD:/");
-                    strcat(chapter->path, current_book->root_dir);
-                    strcat(chapter->path, "/OEBPS/");
-                    strncat(chapter->path, path, path_len);
-                    chapter->number = current_book->num_chapters;
-
-                    LOG_DBG("chapter path: %s", chapter->path);
-                    current_book->num_chapters++;
-                }
-                else if (path_len < 0)
-                {
-                    // Path len is negative, current read batch is finished
-                    // We need to move the offset back to the start of this href to make sure we find it
-                    offset -= strlen(token);
-                }
+                LOG_ERR("Could not read chunk from %s (error: %d)", content_opf, ret);
+                return ret;
             }
 
-            token = strtok(NULL, delim);
+            memcpy(parse_buffer + current_buffer_len, temp_read_buf, read_count);
+            current_buffer_len += read_count;
+            parse_buffer[current_buffer_len] = '\0';
+
+            if (read_count == 0)
+            { // End of file
+                break;
+            }
         }
+
+        char *buffer_ptr = parse_buffer;
+
+        while (true)
+        {
+            char *found_href = strstr(buffer_ptr, search_tag);
+            if (found_href != NULL)
+            {
+                char *path_start = found_href + len_search_tag;
+                char *path_end = strchr(path_start, '"');
+
+                if (path_end != NULL)
+                {
+                    int path_len = path_end - path_start;
+
+                    if (path_len >= EPUB_FILE_LEN_MAX)
+                    {
+                        LOG_ERR("Found path is too long: %.*s", path_len, path_start);
+                        // Skip this long path and continue
+                        buffer_ptr = path_end + 1;
+                        continue;
+                    }
+                    else if (path_len > 0)
+                    {
+                        chapter_entry_t *chapter = epub_add_chapter_entry();
+                        if (chapter == NULL)
+                        {
+                            LOG_ERR("Failed to create new chapter entry");
+                            return -ENOMEM;
+                        }
+                        size_t chapter_path_len = strlen("/SD:/") + strlen(current_book->root_dir) + strlen("/OEBPS/") + path_len + 1;
+                        chapter->path = (char *)malloc(chapter_path_len);
+                        if (chapter->path == NULL)
+                        {
+                            LOG_ERR("Failed to allocate memory for chapter path");
+                            return -ENOMEM;
+                        }
+                        snprintf(chapter->path, chapter_path_len, "/SD:/%s/OEBPS/%.*s",
+                                 current_book->root_dir, path_len, path_start);
+                        chapter->number = current_book->num_chapters;
+
+                        LOG_DBG("chapter path: %s", chapter->path);
+                        current_book->num_chapters++;
+                    }
+                    buffer_ptr = path_end + 1;
+                }
+                else
+                {
+                    // Href found but closing quote not in current buffer.
+                    // This means the path is split across chunks.
+                    // Break and carry over the remaining data.
+                    buffer_ptr = found_href;
+                    break;
+                }
+            }
+            else
+            {
+                // No more hrefs in current buffer_ptr segment
+                buffer_ptr = parse_buffer + current_buffer_len;
+                break;
+            }
+        }
+
+        // Shift remaining data to the beginning of the buffer
+        size_t remaining_len = current_buffer_len - (buffer_ptr - parse_buffer);
+        memmove(parse_buffer, buffer_ptr, remaining_len);
+        current_buffer_len = remaining_len;
+        parse_buffer[current_buffer_len] = '\0';
     }
-    return ret;
+
+    current_buffer_len = 0; // Reset for next use
+    return 0;
 }
 
 bool is_html(char *path)
@@ -622,8 +698,10 @@ int epub_fetch_next_page_chunk()
 
 char *epub_get_next_page()
 {
-    if (current_book) {
-        if (epub_fetch_next_page_chunk() == 0) {
+    if (current_book)
+    {
+        if (epub_fetch_next_page_chunk() == 0)
+        {
             memset(current_book->pretty_page, 0, sizeof(current_book->pretty_page));
             epub_prettify_page();
             LOG_DBG("Pretty page: %s", current_book->pretty_page);
@@ -673,8 +751,10 @@ int epub_fetch_prev_page_chunk()
 
 char *epub_get_prev_page()
 {
-    if (current_book) {
-        if (epub_fetch_prev_page_chunk() == 0) {
+    if (current_book)
+    {
+        if (epub_fetch_prev_page_chunk() == 0)
+        {
             memset(current_book->pretty_page, 0, sizeof(current_book->pretty_page));
             epub_prettify_page();
             LOG_DBG("Pretty page: %s", current_book->pretty_page);
@@ -685,12 +765,53 @@ char *epub_get_prev_page()
     return "";
 }
 
+int epub_free_current_book_resources()
+{
+    if (current_book == NULL)
+    {
+        return 0;
+    }
+
+    if (current_book->chapter_filename)
+    {
+        free(current_book->chapter_filename);
+        current_book->chapter_filename = NULL;
+    }
+
+    chapter_list_t *current = current_book->chapter_list;
+    while (current != NULL)
+    {
+        chapter_list_t *next = current->next;
+        if (current->chapter)
+        {
+            if (current->chapter->path)
+            {
+                free(current->chapter->path);
+                current->chapter->path = NULL;
+            }
+            free(current->chapter);
+            current->chapter = NULL;
+        }
+        free(current);
+        current = next;
+    }
+
+    current_book->chapter_list = NULL;
+    current_book->current_chapter = NULL;
+
+    free(current_book);
+    current_book = NULL;
+
+    return 0;
+}
+
 int epub_open_book(book_entry_t *book)
 {
-    free(current_book);
+    epub_free_current_book_resources();
+
     current_book = (current_book_t *)malloc(sizeof(current_book_t));
 
-    current_book->state.title = strdup(book->title);
+    current_book->state.title = book->title;
     current_book->state.chapter = -1;
     current_book->state.file_offset = 0;
 
@@ -708,17 +829,21 @@ int epub_restore_book()
 {
     book_entry_t *book = NULL;
 
-    if (current_book) {
-        free(current_book);
+    if (current_book)
+    {
+        epub_free_current_book_resources();
     }
     current_book = epub_get_current_book_state();
-    if (!current_book) {
+    if (!current_book)
+    {
         LOG_INF("No current book state found.");
         return -ENOENT;
     }
 
     LOG_DBG("Restore title %s", current_book->state.title);
     book = epub_get_book_entry_for_title(current_book->state.title);
+    free(current_book->state.title);
+    current_book->state.title = book->title;
 
     current_book->num_chapters = 0;
     current_book->chapter_list = NULL;
@@ -730,6 +855,39 @@ int epub_restore_book()
     epub_get_chapter_entry(current_book->state.chapter);
 
     return epub_get_chapter(current_book->state.chapter);
+}
+
+int epub_destroy_book_list()
+{
+    book_list_t *current = book_list;
+    while (current != NULL)
+    {
+        book_list_t *next = current->next;
+        if (current->book)
+        {
+            if (current->book->entry_point)
+            {
+                free(current->book->entry_point);
+            }
+            if (current->book->root_dir)
+            {
+                free(current->book->root_dir);
+            }
+            if (current->book->author)
+            {
+                free(current->book->author);
+            }
+            if (current->book->title)
+            {
+                free(current->book->title);
+            }
+            free(current->book);
+        }
+        free(current);
+        current = next;
+    }
+    book_list = NULL;
+    return 0;
 }
 
 int epub_initialize()
@@ -745,7 +903,7 @@ int epub_initialize()
     }
 
     ret = epub_get_epub_rootfiles();
-        if (ret)
+    if (ret)
     {
         LOG_ERR("Fetching the EPUB rootfiles failed.");
         return ret;

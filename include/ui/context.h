@@ -20,15 +20,12 @@
  */
 typedef enum
 {
-    MENU = 0, /**< Menu context. */
-    READING,  /**< Reading context. */
-    SETTINGS  /**< Settings context. */
-
+#define CONTEXT(name) CONTEXT_##name,
+#include "ui/context_def.h"
+#undef CONTEXT
 } context_t;
 
-// When changing the enum, also change the corresponding strings
-// in the .c file!
-extern const char *context_strings[];
+extern const char *const context_strings[];
 
 /** @} */
 

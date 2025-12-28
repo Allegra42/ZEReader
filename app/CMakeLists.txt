@@ -11,4 +11,4 @@ add_subdirectory(src/sd)
 add_subdirectory(src/epub)
 add_subdirectory(src/ui)
 
-target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/main.c src/events.c)

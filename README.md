@@ -77,6 +77,11 @@ west build -b rpi_pico2/rp2350a/m33 app -p always
 west build -b zereader_rev1/rp2350a/m33 app -p always
 ```
 
+### Build for the ZEReader Rev2 Board
+```
+west build -b zereader_rev2/rp2350a/m33 app -p always
+```
+
 ### Other useful build commands
 ```
 # Update Zephyr and external modules
