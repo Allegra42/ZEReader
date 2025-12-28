@@ -13,6 +13,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/input/input.h>
 
+#include <events.h>
 #include <epub/epub.h>
 #include <ui/ui.h>
 
@@ -27,6 +28,8 @@ static const struct gpio_dt_spec powercontrol_pin = GPIO_DT_SPEC_GET(POWERCONTRO
 static void longpress_shutdown_cb(struct input_event *event, void *user_data)
 {
 	LOG_DBG("Long press detected - turning the device off!");
+	epub_free_current_book_resources();
+	epub_destroy_book_list();
 	gpio_pin_set_dt(&powercontrol_pin, 0);
 }
 INPUT_CALLBACK_DEFINE(longpress_dev, longpress_shutdown_cb, NULL);
@@ -38,6 +41,8 @@ int main(void)
 	int error = 0;
 
 	LOG_DBG("ZEReader is starting... %s\n", CONFIG_BOARD_TARGET);
+
+	app_events_init();
 
 #if defined(CONFIG_BUTTON_ONOFF)
 	LOG_DBG("Button On/Off configured!");
@@ -60,7 +65,9 @@ int main(void)
 	}
 #endif // CONFIG_BUTTON_ONOFF
 
-	context_t context = READING;
+	context_t context = CONTEXT_READING;
+
+	epub_initialize();
 
 	if (zereader_initialize_peripherals() < 0)
 	{
@@ -68,10 +75,7 @@ int main(void)
 		return 0;
 	}
 
-	zereader_setup_page();
-	zereader_setup_statusbar();
-	zereader_setup_control_buttons(&context);
-	epub_initialize();
+	ui_init(&context);
 
 #if defined(CONFIG_BUTTON_ONOFF)
 	error = gpio_pin_set_dt(&powercontrol_pin, 1);
@@ -102,7 +106,9 @@ int main(void)
 
 	while (1)
 	{
+		zereader_ui_lock();
 		uint32_t sleep_ms = lv_timer_handler();
+		zereader_ui_unlock();
 
 		k_msleep(MIN(sleep_ms, INT32_MAX));
 	}

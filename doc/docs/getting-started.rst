@@ -44,13 +44,20 @@ Raspberry Pi Pico 2 with a Device Tree Overlay
 
     west build -b rpi_pico2/rp2350a/m33 app -p
 
-ZEReader PCB based on Pico 2
+ZEReader PCB v1 based on Pico 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
     west build -b zereader_rev1/rp2350a/m33 app -p always
 
+
+ZEReader PCB v2 based on Pico 2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    west build -b zereader_rev2/rp2350a/m33 app -p always
 
 Flash the Microcontroller
 -------------------------

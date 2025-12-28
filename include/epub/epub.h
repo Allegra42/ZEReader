@@ -19,11 +19,24 @@
  */
 
 /**
- * @brief The at maximum handled file name length.
- *
- * The maximum file name length supported by the FatFS filesystem is 255.
+ * @brief The maximum file name length supported by the FatFS filesystem is 255.
  */
 #define EPUB_FILE_LEN_MAX 255
+
+/**
+ * @brief The maximum buffer size for the state string.
+ */
+#define EPUB_STATE_STRING_SIZE 500
+
+/**
+ * @brief The read size for the container.xml file.
+ */
+#define EPUB_CONTAINER_XML_READ_SIZE 350
+
+/**
+ * @brief The read size for the content.opf file.
+ */
+#define EPUB_OPF_READ_SIZE 800
 
 /**
  * @brief The maximum buffer size for listing directories.
@@ -31,6 +44,11 @@
  * Needs a fixed size.
  */
 #define EPUB_LSDIR_CHARS_MAX 4096
+
+/**
+ * @brief The maximum buffer size for parsing chapter files.
+ */
+#define EPUB_PARSE_BUFFER_SIZE 1024
 
 /**
  * @brief The configured page read size.
@@ -52,31 +70,31 @@
  */
 typedef struct
 {
-    /**
-     * The book's internal number.
-     */
-    size_t number;
+  /**
+   * The book's internal number.
+   */
+  size_t number;
 
-    /**
-     * The book title.
-     */
-    char *title;
+  /**
+   * The book title.
+   */
+  char *title;
 
-    /**
-     * The book author.
-     */
-    char *author;
+  /**
+   * The book author.
+   */
+  char *author;
 
-    /**
-     * The path of the book's root file.
-     * Most often OEBPS/content.opf.
-     */
-    char *entry_point;
+  /**
+   * The path of the book's root file.
+   * Most often OEBPS/content.opf.
+   */
+  char *entry_point;
 
-    /**
-     * The book's base directory path.
-     */
-    char *root_dir;
+  /**
+   * The book's base directory path.
+   */
+  char *root_dir;
 } book_entry_t;
 
 /**
@@ -84,15 +102,15 @@ typedef struct
  */
 typedef struct llist
 {
-    /**
-     * The current book entry.
-     */
-    book_entry_t *book;
+  /**
+   * The current book entry.
+   */
+  book_entry_t *book;
 
-    /**
-     * A pointer to the next book entry.
-     */
-    struct llist *next;
+  /**
+   * A pointer to the next book entry.
+   */
+  struct llist *next;
 } book_list_t;
 
 /**
@@ -100,15 +118,15 @@ typedef struct llist
  */
 typedef struct
 {
-    /**
-     * The number of the chapter inside the book.
-     */
-    size_t number;
+  /**
+   * The number of the chapter inside the book.
+   */
+  size_t number;
 
-    /**
-     * The chapter's file path.
-     */
-    char *path;
+  /**
+   * The chapter's file path.
+   */
+  char *path;
 } chapter_entry_t;
 
 /**
@@ -116,20 +134,20 @@ typedef struct
  */
 typedef struct dllist
 {
-    /**
-     * The current chapter entry.
-     */
-    chapter_entry_t *chapter;
+  /**
+   * The current chapter entry.
+   */
+  chapter_entry_t *chapter;
 
-    /**
-     * A pointer to the next chapter entry.
-     */
-    struct dllist *next;
+  /**
+   * A pointer to the next chapter entry.
+   */
+  struct dllist *next;
 
-    /**
-     * A pointer to the previous chapter entry.
-     */
-    struct dllist *prev;
+  /**
+   * A pointer to the previous chapter entry.
+   */
+  struct dllist *prev;
 } chapter_list_t;
 
 /**
@@ -137,68 +155,75 @@ typedef struct dllist
  */
 typedef struct
 {
+  /**
+   * The number of the book's chapters.
+   */
+  uint16_t num_chapters;
+
+  /**
+   * A pointer to the book's chapter list.
+   */
+  chapter_list_t *chapter_list;
+
+  /**
+   * A pointer to the currently active chapter.
+   */
+  chapter_list_t *current_chapter;
+
+  /**
+   * The currently read raw page chunk.
+   */
+  char page[EPUB_PAGE_SIZE];
+
+  /**
+   * The parsed and prettified page chunk.
+   */
+  char pretty_page[EPUB_PAGE_SIZE];
+
+  /**
+   * The current chapter's filename.
+   */
+  char *chapter_filename;
+
+  /**
+   * The current book's root directory path.
+   */
+  char *root_dir;
+
+  /**
+   * The current book's state.
+   */
+  struct
+  {
     /**
-     * The number of the book's chapters.
+     * The currently read book's title.
+     *
+     * Use to find and open the right book at rebooting the Reader.
      */
-    uint16_t num_chapters;
+    // May use title instead of number in future
+    char *title;
+
+    // size_t book_number;
 
     /**
-     * A pointer to the book's chapter list.
+     * The currently read chapter.
      */
-    chapter_list_t *chapter_list;
+    size_t chapter;
 
     /**
-     * A pointer to the currently active chapter.
+     * The current file offset within the chapter file.
      */
-    chapter_list_t *current_chapter;
-
-    /**
-     * The currently read raw page chunk.
-     */
-    char page[EPUB_PAGE_SIZE];
-
-    /**
-     * The parsed and prettified page chunk.
-     */
-    char pretty_page[EPUB_PAGE_SIZE];
-
-    /**
-     * The current chapter's filename.
-     */
-    char *chapter_filename;
-
-    /**
-     * The current book's root directory path.
-     */
-    char *root_dir;
-
-    /**
-     * The current book's state.
-     */
-    struct
-    {
-        /**
-         * The currently read book's title.
-         *
-         * Use to find and open the right book at rebooting the Reader.
-         */
-        // May use title instead of number in future
-        char *title;
-
-        // size_t book_number;
-
-        /**
-         * The currently read chapter.
-         */
-        size_t chapter;
-
-        /**
-         * The current file offset within the chapter file.
-         */
-        size_t file_offset;
-    } state;
+    size_t file_offset;
+  } state;
 
 } current_book_t;
+
+/**
+ * @brief Free all dynamically allocated resources within the book list.
+ *
+ * @retval 0 on success.
+ */
+int epub_destroy_book_list();
 
 /**
  * @brief Initialize the SD card and fetch EPUBs, authors and titles.
@@ -278,6 +303,13 @@ int epub_write_current_book_state();
  * @returns A freshly allocated current book
  */
 current_book_t *epub_get_current_book_state();
+
+/**
+ * @brief Free all dynamically allocated resources within the current book.
+ *
+ * @retval 0 on success.
+ */
+int epub_free_current_book_resources();
 
 /** @} */
 #endif
