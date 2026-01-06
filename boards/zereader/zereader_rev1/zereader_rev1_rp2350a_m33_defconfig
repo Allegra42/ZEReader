@@ -18,3 +18,9 @@ CONFIG_USE_DT_CODE_PARTITION=y
 # The uc81xx.c driver has a logic issue with the pixel format
 # use CONFIG_LV_Z_COLOR_MONO_HW_INVERSION as a workaround
 CONFIG_LV_Z_COLOR_MONO_HW_INVERSION=y
+# Disk Access
+CONFIG_DISK_DRIVER_SDMMC=y
+# For SD Debug Output
+CONFIG_SD_LOG_LEVEL_DBG=n
+CONFIG_SDHC_LOG_LEVEL_DBG=n
+CONFIG_SDMMC_LOG_LEVEL_DBG=n

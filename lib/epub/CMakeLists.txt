@@ -2,4 +2,5 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/epub.c)
+zephyr_library()
+zephyr_library_sources(epub.c)

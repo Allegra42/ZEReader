@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#include "widgets/book_menu.h"
+#include <ui/widgets/book_menu.h>
 #include <string.h>
 
 lv_obj_t* zereader_book_menu_create(lv_obj_t *parent, const char *book_list_str, context_t *context, lv_event_cb_t event_cb)

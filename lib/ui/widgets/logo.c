@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#include "widgets/logo.h"
+#include <ui/widgets/logo.h>
 #include <ui/logo/zereaderlogomarx.h>
 
 LV_IMG_DECLARE(zereaderlogomarx);

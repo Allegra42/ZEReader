@@ -2,4 +2,6 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sd.c)
+zephyr_library()
+zephyr_library_sources(sd.c)
+zephyr_library_link_libraries(ELMFAT)

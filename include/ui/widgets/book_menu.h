@@ -8,7 +8,7 @@
 #define _UI_WIDGET_BOOK_MENU_H_
 
 #include <lvgl.h>
-#include <ui/context.h>
+#include <ui/context/context.h>
 
 /**
  * @brief Creates the book menu.

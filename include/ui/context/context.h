@@ -21,7 +21,7 @@
 typedef enum
 {
 #define CONTEXT(name) CONTEXT_##name,
-#include "ui/context_def.h"
+#include <ui/context/context_def.h>
 #undef CONTEXT
 } context_t;
 

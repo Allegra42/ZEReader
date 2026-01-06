@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#include "widgets/control_bar.h"
-#include "widgets/button.h"
+#include <ui/widgets/control_bar.h>
+#include <ui/widgets/button.h>
 #include <ui/ui.h>
 #include <stdlib.h>
 

@@ -13,7 +13,7 @@
 #include <zephyr/drivers/display.h>
 #include <zephyr/devicetree.h>
 
-#include "context.h"
+#include <ui/context/context.h>
 
 /**
  * @file
