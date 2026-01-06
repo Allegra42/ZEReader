@@ -9,12 +9,12 @@
 #include <events.h>
 #include <ui/ui.h>
 #include <ui/ui_style.h>
-#include "widgets/button.h"
-#include "widgets/control_bar.h"
-#include "widgets/status_bar.h"
-#include "widgets/text_area.h"
-#include "widgets/logo.h"
-#include "widgets/book_menu.h"
+#include <ui/widgets/button.h>
+#include <ui/widgets/control_bar.h>
+#include <ui/widgets/status_bar.h>
+#include <ui/widgets/text_area.h>
+#include <ui/widgets/logo.h>
+#include <ui/widgets/book_menu.h>
 
 #include <zephyr/logging/log.h>
 
@@ -254,9 +254,12 @@ void zereader_print_current_page()
 {
 	epub_get_prev_page();
 	char *page = epub_get_next_page();
+	// char *page = epub_get_prev_page();
+
 	if (strcmp(page, "") == 0)
 	{
 		// Fetch the next page in case sitting on a chapter border
+    LOG_DBG("Chapter border, fetching the next page!");
 		page = epub_get_next_page();
 	}
 

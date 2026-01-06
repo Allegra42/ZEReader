@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#include "widgets/button.h"
+#include <ui/widgets/button.h>
 
 lv_obj_t* zereader_button_create(lv_obj_t *parent, const lv_style_t *style, const char *text, lv_align_t align, lv_coord_t x_ofs, lv_coord_t y_ofs, lv_event_cb_t event_cb, void *user_data)
 {

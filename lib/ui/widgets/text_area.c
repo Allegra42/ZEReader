@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#include "widgets/text_area.h"
+#include <ui/widgets/text_area.h>
 
 lv_obj_t* zereader_text_area_create(lv_obj_t *parent, const lv_style_t *style)
 {

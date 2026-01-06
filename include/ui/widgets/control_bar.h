@@ -8,7 +8,7 @@
 #define _UI_WIDGET_CONTROL_BAR_H_
 
 #include <lvgl.h>
-#include <ui/context.h>
+#include <ui/context/context.h>
 
 /**
  * @brief A structure to hold the control bar widgets.
