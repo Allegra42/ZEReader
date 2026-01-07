@@ -8,6 +8,7 @@
 #define _EVENTS_H_
 
 #include <stdint.h>
+#include <zephyr/drivers/gpio.h>
 
 typedef enum {
     APP_EVENT_NONE,
@@ -16,14 +17,18 @@ typedef enum {
     // APP_EVENT_NEXT_PAGE,
     // APP_EVENT_PREV_PAGE,
     // APP_EVENT_SHOW_MENU,
+    APP_EVENT_SHUTDOWN,
 } application_event_t;
 
 typedef struct {
     application_event_t type;
     union {
         struct {
-            uint32_t book_id;
+          uint32_t book_id;
         } book_selected;
+        struct {
+          const struct gpio_dt_spec *pin;
+        } shutdown;
         // Add other event data here
     } data;
 } app_event_t;
