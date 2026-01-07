@@ -22,15 +22,22 @@
 LOG_MODULE_REGISTER(main, CONFIG_ZEREADER_LOG_LEVEL);
 
 #if defined(CONFIG_BUTTON_ONOFF)
+static bool shutdown_triggered = false;
 static const struct device *const longpress_dev = DEVICE_DT_GET(DT_NODELABEL(longpress));
 static const struct gpio_dt_spec powercontrol_pin = GPIO_DT_SPEC_GET(POWERCONTROL, gpios);
 
 static void longpress_shutdown_cb(struct input_event *event, void *user_data)
 {
 	LOG_DBG("Long press detected - turning the device off!");
-	epub_free_current_book_resources();
-	epub_destroy_book_list();
-	gpio_pin_set_dt(&powercontrol_pin, 0);
+  if (!shutdown_triggered)
+  {
+    shutdown_triggered = true;
+    app_event_t app_event = {
+      .type = APP_EVENT_SHUTDOWN,
+      .data.shutdown.pin = &powercontrol_pin,
+    };
+    app_post_event(&app_event);
+  }
 }
 INPUT_CALLBACK_DEFINE(longpress_dev, longpress_shutdown_cb, NULL);
 

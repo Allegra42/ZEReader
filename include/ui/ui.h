@@ -102,6 +102,11 @@ void zereader_show_logo();
 void zereader_clean_logo();
 
 /**
+ * @brief Show a clean shutdown screen.
+ */
+void zereader_show_shutdown_screen();
+
+/**
  * @brief Turn off display blanking
  */
 void zereader_display_blanking_off();
