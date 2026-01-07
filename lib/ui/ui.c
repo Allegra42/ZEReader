@@ -6,7 +6,7 @@
 
 #include <epub/epub.h>
 
-#include <events.h>
+#include <event_handler/event_handler.h>
 #include <ui/ui.h>
 #include <ui/ui_style.h>
 #include <ui/widgets/button.h>
