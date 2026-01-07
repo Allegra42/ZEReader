@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#include <epub/epub.h>
-
 #include <event_handler/event_handler.h>
 #include <ui/ui.h>
 #include <ui/ui_style.h>
@@ -36,8 +34,6 @@ static lv_obj_t *book_roller;
 static zereader_control_bar_t *control_bar;
 
 uint8_t page_ctr;
-void zereader_print_prev_page();
-void zereader_print_next_page();
 
 static void book_roller_event_handler(lv_event_t *e)
 {
@@ -56,39 +52,15 @@ static void book_roller_event_handler(lv_event_t *e)
 
     app_event_t event = {
         .type = APP_EVENT_BOOK_SELECTED,
-        .data.book_selected.book_id = book_nr};
+        .data.book_selected.book_id = book_nr,
+    };
     app_post_event(&event);
   }
 }
 
-void zereader_show_bookmenu(context_t *context)
+void zereader_show_bookmenu(context_t *context, const char *booklist)
 {
-  char book_list_str[UI_BOOK_LIST_STR_SIZE];
-  memset(book_list_str, 0, sizeof(book_list_str));
-  size_t remaining_len = sizeof(book_list_str);
-  char *current_pos = book_list_str;
-
-  book_list_t *books = epub_get_book_list();
-
-  while (books != NULL)
-  {
-    int written = snprintf(current_pos, remaining_len, "%zu - %s - %s", books->book->number, books->book->author, books->book->title);
-    if (written > 0 && written < remaining_len)
-    {
-      current_pos += written;
-      remaining_len -= written;
-    }
-
-    if (books->next != NULL && remaining_len > 1)
-    {
-      *current_pos = '\n';
-      current_pos++;
-      remaining_len--;
-    }
-    books = books->next;
-  }
-
-  book_roller = zereader_book_menu_create(lv_screen_active(), book_list_str, context, book_roller_event_handler);
+  book_roller = zereader_book_menu_create(lv_screen_active(), booklist, context, book_roller_event_handler);
 }
 
 static void button_1_clicked_cb(lv_event_t *e)
@@ -100,9 +72,10 @@ static void button_1_clicked_cb(lv_event_t *e)
 
   if (*context == CONTEXT_READING)
   {
-    zereader_print_prev_page();
-    epub_write_current_book_state();
-    // epub_get_current_book_state();
+    app_event_t event = {
+        .type = APP_EVENT_PREV_PAGE,
+    };
+    app_post_event(&event);
   }
   else if (*context == CONTEXT_MENU)
   {
@@ -121,7 +94,12 @@ static void button_2_clicked_cb(lv_event_t *e)
   {
     *context = CONTEXT_MENU;
     zereader_control_bar_update_labels(control_bar, *context);
-    zereader_show_bookmenu(context);
+    // zereader_show_bookmenu(context);
+    app_event_t event = {
+        .type = APP_EVENT_SHOW_BOOKMENU,
+        .data.context.context = context,
+    };
+    app_post_event(&event);
   }
   else if (*context == CONTEXT_MENU)
   {
@@ -158,9 +136,10 @@ static void button_4_clicked_cb(lv_event_t *e)
 
   if (*context == CONTEXT_READING)
   {
-    zereader_print_next_page();
-    epub_write_current_book_state();
-    // epub_get_current_book_state();
+    app_event_t event = {
+        .type = APP_EVENT_NEXT_PAGE,
+    };
+    app_post_event(&event);
   }
   else if (*context == CONTEXT_MENU)
   {
@@ -226,7 +205,6 @@ void zereader_setup_page()
   LOG_DBG("Setup page");
 
   text_area = zereader_text_area_create(lv_screen_active(), &style_font_notoserif_14);
-
   page_ctr = 0;
 }
 
@@ -243,34 +221,10 @@ void screen_health()
   }
 }
 
-void zereader_print_next_page()
+void zereader_print_page(const char *page)
 {
-  lv_textarea_set_text(text_area, epub_get_next_page());
-  // lv_textarea_add_text(text_area, epub_get_next_page());
-  screen_health();
-}
-
-void zereader_print_current_page()
-{
-  epub_get_prev_page();
-  char *page = epub_get_next_page();
-  // char *page = epub_get_prev_page();
-
-  if (strcmp(page, "") == 0)
-  {
-    // Fetch the next page in case sitting on a chapter border
-    LOG_DBG("Chapter border, fetching the next page!");
-    page = epub_get_next_page();
-  }
-
   lv_textarea_set_text(text_area, page);
   // lv_textarea_add_text(text_area, epub_get_next_page());
-  screen_health();
-}
-
-void zereader_print_prev_page()
-{
-  lv_textarea_set_text(text_area, epub_get_prev_page());
   screen_health();
 }
 

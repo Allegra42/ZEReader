@@ -23,24 +23,25 @@
  * @{
  */
 
-#define BT_OK     "ok"
-#define BT_EXIT   "exit"
-#define BT_NEXT   "next"
-#define BT_PREV   "prev"
-#define BT_UP     "up"
-#define BT_DOWN   "down"
-#define BT_MENU   "books"
-#define BT_NONE   " "
+#define BT_OK   "ok"
+#define BT_EXIT "exit"
+#define BT_NEXT "next"
+#define BT_PREV "prev"
+#define BT_UP   "up"
+#define BT_DOWN "down"
+#define BT_MENU "books"
+#define BT_NONE " "
 
 #define UI_BOOK_LIST_STR_SIZE 1000
 #define UI_SCREEN_REFRESH_PAGES 8
 
-typedef enum {
-    UI_SUCCESS = 0,
-    UI_ERROR_DISPLAY_NOT_READY = -1,
-    UI_ERROR_LVGL_INPUT_NOT_READY = -2,
-    UI_ERROR_ADC_CONTROLLER_NOT_READY = -3,
-    UI_ERROR_ADC_CHANNEL_SETUP_FAILED = -4
+typedef enum
+{
+  UI_SUCCESS = 0,
+  UI_ERROR_DISPLAY_NOT_READY = -1,
+  UI_ERROR_LVGL_INPUT_NOT_READY = -2,
+  UI_ERROR_ADC_CONTROLLER_NOT_READY = -3,
+  UI_ERROR_ADC_CHANNEL_SETUP_FAILED = -4
 } ui_error_code_t;
 
 /**
@@ -82,14 +83,16 @@ void zereader_setup_statusbar();
 void zereader_clean_page();
 
 /**
- * @brief Show the current page.
+ * @brief Render a page with the given input.
+ *
+ * @param[in] page A pointer to the text to render.
  */
-void zereader_print_current_page();
+void zereader_print_page(const char *page);
 
 /**
- * @brief Show the next page.
+ * @brief Show the book selection menu.
  */
-void zereader_print_next_page();
+void zereader_show_bookmenu(context_t *context, const char *booklist);
 
 /**
  * @brief Show the configured logo.
