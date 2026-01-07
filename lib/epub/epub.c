@@ -190,19 +190,7 @@ chapter_entry_t *epub_add_chapter_entry()
     return node->chapter;
 }
 
-chapter_entry_t *epub_get_chapter_entry(uint16_t number)
-{
-    chapter_list_t *current = current_book->chapter_list;
-    while (current != NULL)
-    {
-        if (current->chapter->number == number)
-        {
-            return current->chapter;
-        }
-        current = current->next;
-    }
-    return NULL;
-}
+
 
 chapter_list_t *epub_get_chapter_list()
 {
@@ -623,28 +611,28 @@ int epub_get_next_chapter()
 
 int epub_get_chapter(size_t index)
 {
-    LOG_DBG("Get chapter");
+    LOG_DBG("Get chapter %d", index);
     if (current_book->state.chapter >= current_book->num_chapters - 1)
     {
         LOG_DBG("Book finished!");
         return 0;
     }
-    if (current_book->current_chapter == NULL)
+    // Set linked list pointer to the first element
+    current_book->current_chapter = current_book->chapter_list;
+
+    for (size_t i = 0; i < index; i++)
     {
-        // Set linked list pointer to the first element
-        current_book->current_chapter = current_book->chapter_list;
+        if (current_book->current_chapter->next != NULL)
+        {
+            current_book->current_chapter = current_book->current_chapter->next;
+        }
+        else
+        {
+            // Index is out of bounds
+            return -1;
+        }
     }
 
-    if (index == 0)
-    {
-        return 0;
-    }
-    else
-    {
-        current_book->current_chapter = current_book->current_chapter->next;
-        // current_book->state.chapter++;
-        return epub_get_chapter(index - 1);
-    }
     return 0;
 }
 
@@ -852,7 +840,6 @@ int epub_restore_book()
     current_book->root_dir = book->root_dir;
 
     epub_parse_chapter_files(book->entry_point);
-    epub_get_chapter_entry(current_book->state.chapter);
 
     return epub_get_chapter(current_book->state.chapter);
 }

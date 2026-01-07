@@ -9,14 +9,15 @@
 
 #include <stdint.h>
 #include <zephyr/drivers/gpio.h>
+#include <ui/context/context.h>
 
 typedef enum {
     APP_EVENT_NONE,
     APP_EVENT_BOOK_SELECTED,
     // Add other events here, e.g.
-    // APP_EVENT_NEXT_PAGE,
-    // APP_EVENT_PREV_PAGE,
-    // APP_EVENT_SHOW_MENU,
+    APP_EVENT_PREV_PAGE,
+    APP_EVENT_NEXT_PAGE,
+    APP_EVENT_SHOW_BOOKMENU,
     APP_EVENT_SHUTDOWN,
 } application_event_t;
 
@@ -26,6 +27,9 @@ typedef struct {
         struct {
           uint32_t book_id;
         } book_selected;
+        struct {
+          context_t *context;
+        } context;
         struct {
           const struct gpio_dt_spec *pin;
         } shutdown;

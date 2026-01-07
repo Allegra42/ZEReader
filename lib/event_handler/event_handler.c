@@ -24,14 +24,67 @@ static void handle_book_selected_event(const app_event_t *event)
   book_entry_t *entry = epub_get_book_entry_for_num(event->data.book_selected.book_id);
   epub_open_book(entry);
   zereader_ui_lock();
-  zereader_print_next_page();
+  zereader_print_page(epub_get_next_page());
   zereader_ui_unlock();
   epub_write_current_book_state();
 }
 
+static void handle_prev_page_event(const app_event_t *event)
+{
+  LOG_DBG("Handling APP_EVENT_PREV_PAGE");
+  zereader_ui_lock();
+  zereader_print_page(epub_get_prev_page());
+  zereader_ui_unlock();
+  epub_write_current_book_state();
+  // epub_get_current_book_state();
+}
+
+static void handle_next_page_event(const app_event_t *event)
+{
+  LOG_DBG("Handling APP_EVENT_NEXT_PAGE");
+  zereader_ui_lock();
+  zereader_print_page(epub_get_next_page());
+  zereader_ui_unlock();
+  epub_write_current_book_state();
+  // epub_get_current_book_state();
+}
+
+static void handle_show_bookmenu_event(const app_event_t *event)
+{
+  LOG_DBG("Handling APP_EVENT_SHOW_BOOKMENU");
+  char book_list_str[UI_BOOK_LIST_STR_SIZE];
+  memset(book_list_str, 0, sizeof(book_list_str));
+  size_t remaining_len = sizeof(book_list_str);
+  char *current_pos = book_list_str;
+
+  book_list_t *books = epub_get_book_list();
+
+  while (books != NULL)
+  {
+    int written = snprintf(current_pos, remaining_len, "%zu - %s - %s", books->book->number, books->book->author, books->book->title);
+    if (written > 0 && written < remaining_len)
+    {
+      current_pos += written;
+      remaining_len -= written;
+    }
+
+    if (books->next != NULL && remaining_len > 1)
+    {
+      *current_pos = '\n';
+      current_pos++;
+      remaining_len--;
+    }
+    books = books->next;
+  }
+
+  zereader_ui_lock();
+  zereader_show_bookmenu(event->data.context.context, book_list_str);
+  zereader_ui_unlock();
+}
+
 static void handle_shutdown_event(const app_event_t *event)
 {
-  LOG_DBG("In shutdown event handler");
+  LOG_DBG("Handling APP_EVENT_SHUTDOWN");
   zereader_ui_lock();
   zereader_show_shutdown_screen();
   epub_free_current_book_resources();
@@ -45,6 +98,9 @@ static void handle_shutdown_event(const app_event_t *event)
 // Array of function pointers, indexed by event type
 static void (*event_handlers[])(const app_event_t *) = {
     [APP_EVENT_BOOK_SELECTED] = handle_book_selected_event,
+    [APP_EVENT_PREV_PAGE] = handle_prev_page_event,
+    [APP_EVENT_NEXT_PAGE] = handle_next_page_event,
+    [APP_EVENT_SHOW_BOOKMENU] = handle_show_bookmenu_event,
     [APP_EVENT_SHUTDOWN] = handle_shutdown_event,
 };
 
