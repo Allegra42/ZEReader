@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-#ifndef _EVENTS_H_
-#define _EVENTS_H_
+#ifndef _EVENT_HANDLER_H_
+#define _EVENT_HANDLER_H_
 
 #include <stdint.h>
 #include <zephyr/drivers/gpio.h>
@@ -45,4 +45,4 @@ void app_post_event(const app_event_t *event);
  */
 void app_events_init(void);
 
-#endif /* _EVENTS_H_ */
+#endif /* _EVENT_HANDLER_H_ */

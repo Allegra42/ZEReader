@@ -13,7 +13,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/input/input.h>
 
-#include <events.h>
+#include <event_handler/event_handler.h>
 #include <epub/epub.h>
 #include <ui/ui.h>
 
