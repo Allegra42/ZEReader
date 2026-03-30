@@ -45,7 +45,7 @@ Raspberry Pi Pico 2 with a Device Tree Overlay
     west build -b rpi_pico2/rp2350a/m33 app -p
 
 ZEReader PCB v1 based on Pico 2
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
@@ -53,7 +53,7 @@ ZEReader PCB v1 based on Pico 2
 
 
 ZEReader PCB v2 based on Pico 2
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 

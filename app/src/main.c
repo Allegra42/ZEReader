@@ -14,7 +14,6 @@
 #include <zephyr/input/input.h>
 
 #include <event_handler/event_handler.h>
-#include <epub/epub.h>
 #include <ui/ui.h>
 
 #define POWERCONTROL DT_ALIAS(devicestatecontrol)
@@ -45,8 +44,6 @@ INPUT_CALLBACK_DEFINE(longpress_dev, longpress_shutdown_cb, NULL);
 
 int main(void)
 {
-  int error = 0;
-
   LOG_DBG("ZEReader is starting... %s\n", CONFIG_BOARD_TARGET);
 
   app_events_init();
@@ -58,11 +55,11 @@ int main(void)
     LOG_ERR("Device 'powercontrol_pin' is not ready, aborting...");
     return 0;
   }
-  error = gpio_pin_configure_dt(&powercontrol_pin, GPIO_OUTPUT_ACTIVE);
-  if (error < 0)
+
+  if (gpio_pin_configure_dt(&powercontrol_pin, GPIO_OUTPUT_ACTIVE) < 0)
   {
     LOG_ERR("Device 'powercontrol_pin' could not be configured as an output!");
-    return error;
+    return -EACCES;
   }
 
   if (!device_is_ready(longpress_dev))
@@ -73,8 +70,11 @@ int main(void)
 #endif // CONFIG_BUTTON_ONOFF
 
   context_t context = CONTEXT_READING;
-
-  epub_initialize();
+  app_event_t event_epub_init = {
+    .type = APP_EVENT_EPUB_INIT,
+    .data.context.context = &context,
+  };
+  app_post_event(&event_epub_init);
 
   if (zereader_initialize_peripherals() < 0)
   {
@@ -85,11 +85,10 @@ int main(void)
   ui_init(&context);
 
 #if defined(CONFIG_BUTTON_ONOFF)
-  error = gpio_pin_set_dt(&powercontrol_pin, 1);
-  if (error < 0)
+  if (gpio_pin_set_dt(&powercontrol_pin, 1) < 0)
   {
     LOG_ERR("Unable to set 'powercontrol_pin'!");
-    return error;
+    return -EACCES;
   }
   else
   {
@@ -103,21 +102,11 @@ int main(void)
   zereader_display_blanking_off();
   zereader_clean_page();
 
-  error = epub_restore_book();
-  if (error == 0)
-  {
-    // Restore the last page
-    epub_get_prev_page();
-    char *page = epub_get_next_page();
-
-    if (strcmp(page, "") == 0)
-    {
-      // Fetch the next page in case sitting on a chapter border
-      LOG_DBG("Chapter border, fetching the next page!");
-      page = epub_get_next_page();
-    }
-    zereader_print_page(page);
-  }
+  app_event_t event_restore_book = {
+    .type = APP_EVENT_RESTORE_BOOK,
+    .data.context.context = &context,
+  };
+  app_post_event(&event_restore_book);
 
   lv_timer_handler();
 

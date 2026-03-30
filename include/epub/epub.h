@@ -48,14 +48,15 @@
 /**
  * @brief The maximum buffer size for parsing chapter files.
  */
-#define EPUB_PARSE_BUFFER_SIZE 1024
+#define EPUB_PARSE_BUFFER_SIZE 4096 // Increased to accommodate larger raw content for parsing
 
 /**
- * @brief The configured page read size.
+ * @brief The maximum configured page read size.
  *
- * The configured read chuck to be handled and parsed.
+ * This defines the maximum internal buffer size for a page. The UI will request
+ * a specific size, but it cannot exceed this internal buffer size.
  */
-#define EPUB_PAGE_SIZE 1400
+#define EPUB_MAX_PAGE_BUFFER_SIZE 1500 // A reasonable maximum for a display page
 
 /**
  * @brief The path and name for the reading state file.
@@ -95,6 +96,11 @@ typedef struct
    * The book's base directory path.
    */
   char *root_dir;
+
+  /**
+   * The book's base content path.
+   */
+  char *content_dir;
 } book_entry_t;
 
 /**
@@ -173,17 +179,32 @@ typedef struct
   /**
    * The currently read raw page chunk.
    */
-  char page[EPUB_PAGE_SIZE];
-
-  /**
-   * The parsed and prettified page chunk.
-   */
-  char pretty_page[EPUB_PAGE_SIZE];
+  char page[EPUB_MAX_PAGE_BUFFER_SIZE];
 
   /**
    * The current chapter's filename.
    */
   char *chapter_filename;
+
+  /**
+   * The raw content of the current chapter file.
+   */
+  char *chapter_raw_content;
+
+  /**
+   * The size of the raw content of the current chapter file.
+   */
+  size_t chapter_raw_content_size;
+
+  /**
+   * The prettified content of the current chapter file.
+   */
+  char *chapter_prettified_content;
+
+  /**
+   * The size of the prettified content of the current chapter file.
+   */
+  size_t chapter_prettified_content_size;
 
   /**
    * The current book's root directory path.
@@ -208,7 +229,7 @@ typedef struct
     /**
      * The currently read chapter.
      */
-    size_t chapter;
+    int32_t chapter;
 
     /**
      * The current file offset within the chapter file.
@@ -276,18 +297,39 @@ int epub_open_book(book_entry_t *book);
 int epub_restore_book();
 
 /**
- * @brief Get the parsed and prettified previous page.
+ * @brief Get the full content of the current prettified chapter.
  *
- * @returns the parsed and prettified page.
+ * @returns A pointer to the chapter content string. Returns NULL if no book/chapter is loaded.
  */
-char *epub_get_prev_page();
+const char *epub_get_current_chapter_content(void);
 
 /**
- * @brief Get the parsed and prettified next page.
+ * @brief Go to the next chapter.
  *
- * @returns the parsed and prettified page.
+ * @retval 0 on success.
  */
-char *epub_get_next_page();
+int epub_get_next_chapter();
+
+/**
+ * @brief Go to the previous chapter.
+ *
+ * @retval 0 on success.
+ */
+int epub_get_prev_chapter();
+
+/**
+ * @brief Set the scroll position for the current chapter.
+ *
+ * @param[in] pos The scroll position to set.
+ */
+void epub_set_scroll_position(size_t pos);
+
+/**
+ * @brief Get the scroll position for the current chapter.
+ *
+ * @returns The scroll position.
+ */
+size_t epub_get_scroll_position(void);
 
 /**
  * @brief Save the current book's state in a state file on the inserted SD card.

@@ -13,11 +13,13 @@
 
 typedef enum {
     APP_EVENT_NONE,
+    APP_EVENT_EPUB_INIT,
+    APP_EVENT_RESTORE_BOOK,
     APP_EVENT_BOOK_SELECTED,
-    // Add other events here, e.g.
-    APP_EVENT_PREV_PAGE,
-    APP_EVENT_NEXT_PAGE,
+    APP_EVENT_PREV_CHAPTER,
+    APP_EVENT_NEXT_CHAPTER,
     APP_EVENT_SHOW_BOOKMENU,
+    APP_EVENT_SAVE_STATE,
     APP_EVENT_SHUTDOWN,
 } application_event_t;
 
@@ -33,7 +35,9 @@ typedef struct {
         struct {
           const struct gpio_dt_spec *pin;
         } shutdown;
-        // Add other event data here
+        struct {
+            size_t scroll_pos;
+        } save_state;
     } data;
 } app_event_t;
 

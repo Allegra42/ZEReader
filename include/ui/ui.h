@@ -23,15 +23,6 @@
  * @{
  */
 
-#define BT_OK   "ok"
-#define BT_EXIT "exit"
-#define BT_NEXT "next"
-#define BT_PREV "prev"
-#define BT_UP   "up"
-#define BT_DOWN "down"
-#define BT_MENU "books"
-#define BT_NONE " "
-
 #define UI_BOOK_LIST_STR_SIZE 1000
 #define UI_SCREEN_REFRESH_PAGES 8
 
@@ -90,6 +81,33 @@ void zereader_clean_page();
 void zereader_print_page(const char *page);
 
 /**
+ * @brief Recreate the page with new content and scroll position.
+ *
+ * @param[in] page A pointer to the text to render.
+ * @param[in] scroll_pos The scroll position to set.
+ */
+void zereader_recreate_page(const char *page, size_t scroll_pos);
+
+/**
+ * @brief Scroll up in the text view.
+ *
+ */
+void zereader_scroll_up(void);
+
+/**
+ * @brief Scroll down in the text view.
+ *
+ */
+void zereader_scroll_down(void);
+
+/**
+ * @brief Set the scroll position of the text view.
+ *
+ * @param[in] pos The scroll position to set.
+ */
+void zereader_set_scroll_pos(size_t pos);
+
+/**
  * @brief Show the book selection menu.
  */
 void zereader_show_bookmenu(context_t *context, const char *booklist);
@@ -123,6 +141,13 @@ void zereader_ui_lock(void);
  * @brief Unlock the LVGL mutex.
  */
 void zereader_ui_unlock(void);
+
+/**
+ * @brief Get the maximum number of characters that can fit into the text area.
+ *
+ * @returns The maximum number of characters.
+ */
+size_t zereader_get_max_text_area_chars(void);
 
 /** @} */
 

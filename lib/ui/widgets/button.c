@@ -12,6 +12,7 @@ lv_obj_t* zereader_button_create(lv_obj_t *parent, const lv_style_t *style, cons
     if (style) {
         lv_obj_add_style(btn, (lv_style_t*)style, 0);
     }
+    lv_obj_set_style_border_width(btn, 0, LV_PART_MAIN);
 
     lv_obj_align(btn, align, x_ofs, y_ofs);
     lv_obj_add_event_cb(btn, event_cb, LV_EVENT_CLICKED, user_data);
