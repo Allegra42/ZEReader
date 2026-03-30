@@ -13,7 +13,8 @@ lv_obj_t* zereader_book_menu_create(lv_obj_t *parent, const char *book_list_str,
 
 	lv_roller_set_options(book_roller, book_list_str, LV_ROLLER_MODE_INFINITE);
 
-	lv_roller_set_visible_row_count(book_roller, 8);
+	lv_roller_set_visible_row_count(book_roller, 10);
+  lv_obj_set_width(book_roller, 650);
 	lv_obj_center(book_roller);
 
 	lv_style_selector_t selector = LV_PART_MAIN;

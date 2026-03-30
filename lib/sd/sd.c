@@ -20,6 +20,7 @@
 LOG_MODULE_REGISTER(sd_utils, CONFIG_ZEREADER_LOG_LEVEL);
 
 static FATFS fat_fs;
+K_MUTEX_DEFINE(sd_fs_mutex);
 
 static struct fs_mount_t mount_point = {
     .type = FS_FATFS,
@@ -99,6 +100,7 @@ int sd_initialize(void)
 
 int sd_open(char const *const path, struct fs_file_t *f_obj)
 {
+    k_mutex_lock(&sd_fs_mutex, K_FOREVER);
     int ret;
 
     fs_file_t_init(f_obj);
@@ -107,43 +109,46 @@ int sd_open(char const *const path, struct fs_file_t *f_obj)
     if (ret)
     {
         LOG_ERR("Could not open file: %d", ret);
-        return ret;
     }
-
-    return 0;
+    k_mutex_unlock(&sd_fs_mutex);
+    return ret;
 }
 
 int sd_close(struct fs_file_t *f_obj)
 {
+    k_mutex_lock(&sd_fs_mutex, K_FOREVER);
     int ret;
 
     ret = fs_close(f_obj);
     if (ret)
     {
         LOG_ERR("Could not close file: %d", ret);
-        return ret;
     }
-
-    return 0;
+    k_mutex_unlock(&sd_fs_mutex);
+    return ret;
 }
 
 int sd_read(struct fs_file_t *f_obj, char *buffer, size_t *size)
 {
+    k_mutex_lock(&sd_fs_mutex, K_FOREVER);
     int ret;
 
     ret = fs_read(f_obj, buffer, *size);
     if (ret < 0)
     {
         LOG_ERR("Could not read file: %d", ret);
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
     *size = ret;
+    k_mutex_unlock(&sd_fs_mutex);
     return 0;
 }
 
 int sd_read_chunk(char const *const path, size_t *offset, char *const buffer, size_t *size)
 {
+    k_mutex_lock(&sd_fs_mutex, K_FOREVER);
     int ret;
     struct fs_file_t f_obj;
 
@@ -153,6 +158,7 @@ int sd_read_chunk(char const *const path, size_t *offset, char *const buffer, si
     if (ret)
     {
         LOG_ERR("Could not open file: %d", ret);
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -160,6 +166,8 @@ int sd_read_chunk(char const *const path, size_t *offset, char *const buffer, si
     if (ret)
     {
         LOG_ERR("Could not seek file!");
+        fs_close(&f_obj); // Close file on error before unlocking
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -167,6 +175,8 @@ int sd_read_chunk(char const *const path, size_t *offset, char *const buffer, si
     if (ret < 0)
     {
         LOG_ERR("Could not read file: %d", ret);
+        fs_close(&f_obj); // Close file on error before unlocking
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -182,14 +192,14 @@ int sd_read_chunk(char const *const path, size_t *offset, char *const buffer, si
     if (ret)
     {
         LOG_ERR("Could not close file!");
-        return ret;
     }
-
-    return 0;
+    k_mutex_unlock(&sd_fs_mutex);
+    return ret;
 }
 
 int sd_tell_end_offset(char const *const path, size_t *offset)
 {
+    k_mutex_lock(&sd_fs_mutex, K_FOREVER);
     int ret;
     struct fs_file_t f_obj;
     fs_file_t_init(&f_obj);
@@ -200,6 +210,7 @@ int sd_tell_end_offset(char const *const path, size_t *offset)
     if (ret)
     {
         LOG_ERR("Could not open file: %d", ret);
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -207,6 +218,8 @@ int sd_tell_end_offset(char const *const path, size_t *offset)
     if (ret)
     {
         LOG_ERR("Could not seek file!");
+        fs_close(&f_obj); // Close file on error before unlocking
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -216,15 +229,93 @@ int sd_tell_end_offset(char const *const path, size_t *offset)
     if (ret)
     {
         LOG_ERR("Could not close file!");
-        return ret;
+    }
+    k_mutex_unlock(&sd_fs_mutex);
+    return 0;
+}
+
+char *sd_read_whole_file(char const *const path, size_t *file_size)
+{
+    k_mutex_lock(&sd_fs_mutex, K_FOREVER);
+    char *buffer = NULL;
+    struct fs_file_t f_obj;
+    int ret;
+
+    *file_size = 0; // Initialize file_size to 0
+
+    // Get file size
+    ret = sd_get_file_size(path, file_size);
+    if (ret != 0) {
+        LOG_ERR("Failed to get file size for %s: %d", path, ret);
+        k_mutex_unlock(&sd_fs_mutex);
+        return NULL;
     }
 
-    return 0;
+    if (*file_size == 0) {
+        LOG_DBG("File %s is empty, returning empty buffer.", path);
+        buffer = (char *)malloc(1); // Return an empty string
+        if (buffer) {
+            buffer[0] = '\0';
+        }
+        k_mutex_unlock(&sd_fs_mutex);
+        return buffer;
+    }
+
+    // Allocate memory for the file content + null terminator
+    buffer = (char *)malloc(*file_size + 1);
+    if (buffer == NULL) {
+        LOG_ERR("Failed to allocate %zu bytes for file %s", *file_size + 1, path);
+        k_mutex_unlock(&sd_fs_mutex);
+        return NULL;
+    }
+
+    // Open file
+    fs_file_t_init(&f_obj);
+    ret = fs_open(&f_obj, path, FS_O_READ);
+    if (ret != 0) {
+        LOG_ERR("Failed to open file %s: %d", path, ret);
+        free(buffer);
+        k_mutex_unlock(&sd_fs_mutex);
+        return NULL;
+    }
+
+    // Read whole file
+    size_t bytes_read = *file_size;
+    ret = fs_read(&f_obj, buffer, bytes_read);
+    if (ret < 0) {
+        LOG_ERR("Failed to read file %s: %d", path, ret);
+        fs_close(&f_obj);
+        free(buffer);
+        k_mutex_unlock(&sd_fs_mutex);
+        return NULL;
+    }
+    else if (ret != bytes_read) {
+        LOG_WRN("Read %d bytes from %s, expected %zu", ret, path, bytes_read);
+    }
+    buffer[*file_size] = '\0'; // Null-terminate the buffer
+
+    // Close file
+    fs_close(&f_obj);
+    k_mutex_unlock(&sd_fs_mutex);
+    return buffer;
+}
+
+int sd_get_file_size(char const *const path, size_t *file_size)
+{
+    struct fs_dirent entry;
+    int ret = fs_stat(path, &entry);
+    if (ret == 0) {
+        *file_size = entry.size;
+    } else {
+        LOG_ERR("Could not get file size for %s: %d", path, ret);
+    }
+    return ret;
 }
 
 // int sd_write();
 int sd_write_chunk(char const *const path, char const *const data, size_t *size)
 {
+    k_mutex_lock(&sd_fs_mutex, K_FOREVER);
     int ret;
     struct fs_file_t f_obj;
     fs_file_t_init(&f_obj);
@@ -233,6 +324,7 @@ int sd_write_chunk(char const *const path, char const *const data, size_t *size)
     if (ret)
     {
         LOG_ERR("Could not create/open file: %d", ret);
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -241,6 +333,8 @@ int sd_write_chunk(char const *const path, char const *const data, size_t *size)
     if (ret)
     {
         LOG_ERR("Seek file pointer failed");
+        fs_close(&f_obj); // Close file on error before unlocking
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -248,6 +342,8 @@ int sd_write_chunk(char const *const path, char const *const data, size_t *size)
     if (ret < 0)
     {
         LOG_ERR("Could not write file : %d", ret);
+        fs_close(&f_obj); // Close file on error before unlocking
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -257,18 +353,18 @@ int sd_write_chunk(char const *const path, char const *const data, size_t *size)
     if (ret)
     {
         LOG_ERR("Could not close file!");
-        return ret;
     }
-
-    return 0;
+    k_mutex_unlock(&sd_fs_mutex);
+    return ret;
 }
 
 int sd_list_directories(char const *const path, char *buffer, size_t *buffer_size)
 {
+    k_mutex_lock(&sd_fs_mutex, K_FOREVER);
     int ret;
 
     struct fs_dir_t dir_obj;
-    static struct fs_dirent entry;
+    struct fs_dirent entry;
     size_t used = 0;
 
     fs_dir_t_init(&dir_obj);
@@ -277,6 +373,7 @@ int sd_list_directories(char const *const path, char *buffer, size_t *buffer_siz
     if (ret)
     {
         LOG_ERR("Open directory %s failed!", path);
+        k_mutex_unlock(&sd_fs_mutex);
         return ret;
     }
 
@@ -286,6 +383,8 @@ int sd_list_directories(char const *const path, char *buffer, size_t *buffer_siz
         if (ret)
         {
             LOG_DBG("Could not read directory");
+            fs_closedir(&dir_obj); // Close directory on error before unlocking
+            k_mutex_unlock(&sd_fs_mutex);
             return ret;
         }
 
@@ -306,6 +405,8 @@ int sd_list_directories(char const *const path, char *buffer, size_t *buffer_siz
                 if (len >= remaining)
                 {
                     LOG_ERR("Could not append to buffer: %d", len);
+                    fs_closedir(&dir_obj); // Close directory on error before unlocking
+                    k_mutex_unlock(&sd_fs_mutex);
                     return -EINVAL;
                 }
 
@@ -319,9 +420,9 @@ int sd_list_directories(char const *const path, char *buffer, size_t *buffer_siz
     if (ret)
     {
         LOG_ERR("Could not close directory %s", path);
-        return ret;
     }
 
     *buffer_size = used;
-    return 0;
+    k_mutex_unlock(&sd_fs_mutex);
+    return ret;
 }

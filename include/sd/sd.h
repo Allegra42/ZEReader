@@ -118,5 +118,28 @@ int sd_list_directories(char const *const path, char *buffer, size_t *size);
  */
 int sd_tell_end_offset(char const *const path, size_t *offset);
 
+/**
+ * @brief Get the size of a file on the SD card.
+ *
+ * @param[in] path The path to the file.
+ * @param[out] file_size A pointer to store the file size.
+ *
+ * @retval 0 on success.
+ * @retval <0 on failure.
+ */
+int sd_get_file_size(char const *const path, size_t *file_size);
+
+/**
+ * @brief Reads an entire file into a dynamically allocated buffer.
+ * The caller is responsible for freeing the returned buffer.
+ *
+ * @param[in] path The path to the file.
+ * @param[out] file_size A pointer to store the file size.
+ *
+ * @retval A pointer to the dynamically allocated buffer containing the file content on success.
+ * @retval NULL on failure (e.g., file not found, memory allocation error).
+ */
+char *sd_read_whole_file(char const *const path, size_t *file_size);
+
 /** @} */
 #endif

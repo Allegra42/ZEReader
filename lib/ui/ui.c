@@ -63,6 +63,12 @@ void zereader_show_bookmenu(context_t *context, const char *booklist)
   book_roller = zereader_book_menu_create(lv_screen_active(), booklist, context, book_roller_event_handler);
 }
 
+void zereader_set_scroll_pos(size_t pos)
+{
+    lv_obj_update_layout(text_area);
+    lv_obj_scroll_to_y(text_area, pos, LV_ANIM_OFF);
+}
+
 static void button_1_clicked_cb(lv_event_t *e)
 {
   LOG_DBG("Button 1 clicked with event");
@@ -72,10 +78,19 @@ static void button_1_clicked_cb(lv_event_t *e)
 
   if (*context == CONTEXT_READING)
   {
-    app_event_t event = {
-        .type = APP_EVENT_PREV_PAGE,
-    };
+    int val = lv_obj_get_scroll_top(text_area);
+    LOG_DBG("lv_obj_get_scroll_top %d", val);
+    if (val < 0) {
+    app_event_t event = { .type = APP_EVENT_PREV_CHAPTER };
     app_post_event(&event);
+  } else {
+    zereader_ui_lock();
+    lv_obj_scroll_by(text_area, 0, 408, LV_ANIM_OFF);
+    zereader_ui_unlock();
+  }
+    // zereader_ui_lock();
+    // zereader_scroll_up();
+    // zereader_ui_unlock();
   }
   else if (*context == CONTEXT_MENU)
   {
@@ -93,6 +108,14 @@ static void button_2_clicked_cb(lv_event_t *e)
   if (*context == CONTEXT_READING)
   {
     *context = CONTEXT_MENU;
+
+    // Save scroll position before opening menu
+    app_event_t save_event = {
+        .type = APP_EVENT_SAVE_STATE,
+        .data.save_state.scroll_pos = lv_obj_get_scroll_y(text_area)
+    };
+    app_post_event(&save_event);
+
     zereader_control_bar_update_labels(control_bar, *context);
     // zereader_show_bookmenu(context);
     app_event_t event = {
@@ -136,10 +159,16 @@ static void button_4_clicked_cb(lv_event_t *e)
 
   if (*context == CONTEXT_READING)
   {
-    app_event_t event = {
-        .type = APP_EVENT_NEXT_PAGE,
-    };
+  int val = lv_obj_get_scroll_bottom(text_area);
+  LOG_DBG("lv_obj_get_scroll_bottom %d", val);
+  if (val < 0) {
+    app_event_t event = { .type = APP_EVENT_NEXT_CHAPTER };
     app_post_event(&event);
+  } else {
+    zereader_ui_lock();
+    lv_obj_scroll_by(text_area, 0, -408, LV_ANIM_OFF);
+    zereader_ui_unlock();
+  }
   }
   else if (*context == CONTEXT_MENU)
   {
@@ -157,7 +186,10 @@ void zereader_setup_control_buttons(context_t *context)
       .button_3_cb = button_3_clicked_cb,
       .button_4_cb = button_4_clicked_cb,
   };
-  control_bar = zereader_control_bar_create(lv_screen_active(), &style_font_notoserif_14, context, &callbacks);
+  // Currently, symbols are used instead of text.
+  // Thus, it is not needed to set the custom font style -- which does not even include the symbols.
+  // control_bar = zereader_control_bar_create(lv_screen_active(), &style_font_notoserif_14, context, &callbacks);
+  control_bar = zereader_control_bar_create(lv_screen_active(), NULL, context, &callbacks);
 }
 
 void zereader_setup_statusbar()
@@ -223,9 +255,22 @@ void screen_health()
 
 void zereader_print_page(const char *page)
 {
+  if (page == NULL) {
+    page = "";
+  }
   lv_textarea_set_text(text_area, page);
-  // lv_textarea_add_text(text_area, epub_get_next_page());
+  lv_obj_update_layout(text_area);
   screen_health();
+}
+
+void zereader_recreate_page(const char *page, size_t scroll_pos)
+{
+    if (text_area) {
+        lv_obj_del(text_area);
+    }
+    zereader_setup_page();
+    zereader_print_page(page);
+    zereader_set_scroll_pos(scroll_pos);
 }
 
 void zereader_clean_page()
@@ -273,6 +318,15 @@ void zereader_ui_lock(void)
 void zereader_ui_unlock(void)
 {
   k_mutex_unlock(&lvgl_mutex);
+}
+
+size_t zereader_get_max_text_area_chars(void)
+{
+    // TODO: Implement actual calculation based on text_area dimensions and font metrics.
+    // This calculation is complex and depends on the specific font, line height,
+    // and available width/height of the text area.
+    // For now, return a reasonable default that is less than EPUB_MAX_PAGE_BUFFER_SIZE.
+    return 1400; // Placeholder value. EPUB_MAX_PAGE_BUFFER_SIZE is 2000.
 }
 
 void ui_init(context_t *context)
