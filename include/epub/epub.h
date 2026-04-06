@@ -93,12 +93,7 @@ typedef struct
   char *entry_point;
 
   /**
-   * The book's base directory path.
-   */
-  char *root_dir;
-
-  /**
-   * The book's base content path.
+   * The book's base content directory path.
    */
   char *content_dir;
 } book_entry_t;
@@ -207,9 +202,9 @@ typedef struct
   size_t chapter_prettified_content_size;
 
   /**
-   * The current book's root directory path.
+   * The current book's content root directory path.
    */
-  char *root_dir;
+  char *content_dir;
 
   /**
    * The current book's state.
@@ -224,17 +219,16 @@ typedef struct
     // May use title instead of number in future
     char *title;
 
-    // size_t book_number;
-
     /**
      * The currently read chapter.
      */
     int32_t chapter;
 
     /**
-     * The current file offset within the chapter file.
+     * The page within a chapter.
      */
-    size_t file_offset;
+    int32_t page;
+
   } state;
 
 } current_book_t;
@@ -318,18 +312,18 @@ int epub_get_next_chapter();
 int epub_get_prev_chapter();
 
 /**
- * @brief Set the scroll position for the current chapter.
+ * @brief Update the current book's chapter page counter.
  *
- * @param[in] pos The scroll position to set.
+ * @param[in] update The page difference, e.g. +1 or -1.
  */
-void epub_set_scroll_position(size_t pos);
+void epub_update_page(int32_t update);
 
 /**
- * @brief Get the scroll position for the current chapter.
+ * @brief Get the current book's page within a chapter.
  *
- * @returns The scroll position.
+ * @retval A positive page number or 0 on success.
  */
-size_t epub_get_scroll_position(void);
+int32_t epub_get_page(void);
 
 /**
  * @brief Save the current book's state in a state file on the inserted SD card.

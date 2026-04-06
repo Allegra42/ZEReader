@@ -27,5 +27,3 @@ CONFIG_SDMMC_LOG_LEVEL_DBG=n
 # The RP2350 has two CPU cores
 # The Pico 2 supports running code on either a single Cortex-M33 or a Hazard3 (RISC-V) core.
 # As with the Pico 1, there’s no support for running any code on the second core.
-# Enable the RPI Pico RNG driver --> used for stack canaries
-CONFIG_ENTROPY_RPI_PICO_RNG=y

@@ -9,6 +9,8 @@
 
 #include <lvgl.h>
 
+#define UI_PAGE_SIZE 408
+
 /**
  * @brief Creates the main text area.
  *
