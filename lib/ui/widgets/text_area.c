@@ -15,7 +15,7 @@ lv_obj_t* zereader_text_area_create(lv_obj_t *parent, const lv_style_t *style)
     lv_obj_set_x(text_area, 10);
     lv_obj_set_y(text_area, 30);
     lv_obj_set_width(text_area, 780);
-    lv_obj_set_height(text_area, 408);
+    lv_obj_set_height(text_area, UI_PAGE_SIZE);
 
     return text_area;
 }

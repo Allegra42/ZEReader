@@ -31,8 +31,9 @@ static void handle_restore_book_event(const app_event_t *event)
   {
     zereader_ui_lock();
     const char *chapter_content = epub_get_current_chapter_content();
-    if (chapter_content) {
-        zereader_recreate_page(chapter_content, epub_get_scroll_position());
+    if (chapter_content)
+    {
+      zereader_recreate_page(chapter_content, epub_get_page());
     }
     zereader_ui_unlock();
   }
@@ -41,7 +42,6 @@ static void handle_restore_book_event(const app_event_t *event)
 static void handle_save_state_event(const app_event_t *event)
 {
   LOG_DBG("Handling APP_EVENT_SAVE_STATE");
-  epub_set_scroll_position(event->data.save_state.scroll_pos);
   epub_write_current_book_state();
 }
 
@@ -54,8 +54,9 @@ static void handle_book_selected_event(const app_event_t *event)
   LOG_DBG("epub_open()");
   zereader_ui_lock();
   const char *chapter_content = epub_get_current_chapter_content();
-  if (chapter_content) {
-    zereader_print_page(chapter_content);
+  if (chapter_content)
+  {
+    zereader_recreate_page(chapter_content, 0);
   }
   zereader_ui_unlock();
   epub_write_current_book_state();
@@ -64,11 +65,13 @@ static void handle_book_selected_event(const app_event_t *event)
 static void handle_prev_chapter_event(const app_event_t *event)
 {
   LOG_DBG("Handling APP_EVENT_PREV_CHAPTER");
-  if (epub_get_prev_chapter() == 0) {
+  if (epub_get_prev_chapter() == 0)
+  {
     zereader_ui_lock();
     const char *chapter_content = epub_get_current_chapter_content();
-    if (chapter_content) {
-        zereader_recreate_page(chapter_content, 0);
+    if (chapter_content)
+    {
+      zereader_print_page(chapter_content);
     }
     zereader_ui_unlock();
     epub_write_current_book_state();
@@ -78,15 +81,37 @@ static void handle_prev_chapter_event(const app_event_t *event)
 static void handle_next_chapter_event(const app_event_t *event)
 {
   LOG_DBG("Handling APP_EVENT_NEXT_CHAPTER");
-  if (epub_get_next_chapter() == 0) {
+  if (epub_get_next_chapter() == 0)
+  {
     zereader_ui_lock();
     const char *chapter_content = epub_get_current_chapter_content();
-    if (chapter_content) {
-        zereader_recreate_page(chapter_content, 0);
+    if (chapter_content)
+    {
+      zereader_recreate_page(chapter_content, 0);
     }
     zereader_ui_unlock();
     epub_write_current_book_state();
   }
+}
+
+static void handle_next_page_event(const app_event_t *event)
+{
+  LOG_DBG("Handling APP_EVENT_NEXT_PAGE");
+  zereader_ui_lock();
+  zereader_scroll_down();
+  zereader_ui_unlock();
+  epub_update_page(1);
+  epub_write_current_book_state();
+}
+
+static void handle_prev_page_event(const app_event_t *event)
+{
+  LOG_DBG("Handling APP_EVENT_PREV_PAGE");
+  zereader_ui_lock();
+  zereader_scroll_up();
+  zereader_ui_unlock();
+  epub_update_page(-1);
+  epub_write_current_book_state();
 }
 
 static void handle_show_bookmenu_event(const app_event_t *event)
@@ -142,6 +167,8 @@ static void (*event_handlers[])(const app_event_t *) = {
     [APP_EVENT_BOOK_SELECTED] = handle_book_selected_event,
     [APP_EVENT_PREV_CHAPTER] = handle_prev_chapter_event,
     [APP_EVENT_NEXT_CHAPTER] = handle_next_chapter_event,
+    [APP_EVENT_NEXT_PAGE] = handle_next_page_event,
+    [APP_EVENT_PREV_PAGE] = handle_prev_page_event,
     [APP_EVENT_SHOW_BOOKMENU] = handle_show_bookmenu_event,
     [APP_EVENT_SAVE_STATE] = handle_save_state_event,
     [APP_EVENT_SHUTDOWN] = handle_shutdown_event,

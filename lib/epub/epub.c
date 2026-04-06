@@ -94,19 +94,21 @@ book_list_t *epub_get_book_list()
   return book_list;
 }
 
-size_t epub_get_scroll_position(void)
+void epub_update_page(int32_t update)
 {
-    if (current_book) {
-        return current_book->state.file_offset;
-    }
-    return 0;
+  if (current_book)
+  {
+    current_book->state.page = current_book->state.page + update;
+  }
 }
 
-void epub_set_scroll_position(size_t pos)
+int32_t epub_get_page()
 {
-    if (current_book) {
-        current_book->state.file_offset = pos;
-    }
+  if (current_book)
+  {
+    return current_book->state.page;
+  }
+  return 0;
 }
 
 int epub_write_current_book_state()
@@ -125,7 +127,7 @@ int epub_write_current_book_state()
   size_t to_write;
   char state_string[EPUB_STATE_STRING_SIZE];
 
-  sprintf(state_string, "%s\n%zu\n%zu\n", current_book->state.title, current_book->state.chapter, current_book->state.file_offset);
+  sprintf(state_string, "%s\n%zu\n%zu\n", current_book->state.title, current_book->state.chapter, current_book->state.page);
   to_write = strlen(state_string);
 
   int ret = sd_write_chunk(STATE_FILE, state_string, &to_write);
@@ -149,15 +151,12 @@ current_book_t *epub_get_current_book_state()
     k_mutex_unlock(&epub_mutex);
     return NULL;
   }
-  // file_size will include null terminator if file was empty or sd_read_whole_file allocated for it.
-  // Ensure it's null-terminated for strtok_r safety, though sd_read_whole_file should already do this.
-  // buf[file_size] = '\0'; // sd_read_whole_file already handles null termination
 
   LOG_DBG("Current state:\n %s", buf);
 
   char *title_read = 0; // Renamed to avoid confusion with allocated title
   int32_t chapter = 0;
-  size_t ofs = 0;
+  size_t page = 0;
 
   char *saveptr;
   char *token = strtok_r(buf, "\n", &saveptr);
@@ -177,8 +176,8 @@ current_book_t *epub_get_current_book_state()
   token = strtok_r(NULL, "\n", &saveptr);
   if (token != NULL)
   {
-    ofs = strtoul(token, NULL, 10);
-    LOG_DBG("Offset: %d", ofs);
+    page = strtoul(token, NULL, 10);
+    LOG_DBG("Page: %d", page);
   }
 
   current_book_t *current_book_local = malloc(sizeof(current_book_t));
@@ -186,7 +185,7 @@ current_book_t *epub_get_current_book_state()
   {
     current_book_local->state.title = strdup(title_read ? title_read : ""); // Duplicate title_read or empty string
     current_book_local->state.chapter = chapter;
-    current_book_local->state.file_offset = ofs;
+    current_book_local->state.page = page;
   }
 
   free(buf); // Free the dynamically allocated buffer
@@ -377,8 +376,7 @@ int epub_get_epub_rootfiles()
           book->number = found;
           book->entry_point = strdup(rootpath);
           LOG_DBG("Entry point: %s", book->entry_point);
-          book->root_dir = strdup(entry.name);
-          LOG_DBG("Root dir: %s", book->root_dir);
+          LOG_DBG("Root dir: %s", entry.name);
 
           // Usually the rootpath should look like
           // /SD:/<bookname>/OEBPS/content.opf
@@ -490,7 +488,7 @@ int epub_parse_chapter_files(const char *content_opf)
             ret = -ENOMEM;
             break; // Exit loop on error
           }
-          size_t chapter_path_len = strlen(current_book->root_dir) + path_len + 2;
+          size_t chapter_path_len = strlen(current_book->content_dir) + path_len + 2;
           chapter->path = (char *)malloc(chapter_path_len);
           if (chapter->path == NULL)
           {
@@ -499,7 +497,7 @@ int epub_parse_chapter_files(const char *content_opf)
             break; // Exit loop on error
           }
           snprintf(chapter->path, chapter_path_len, "%s/%.*s",
-                   current_book->root_dir, path_len, path_start);
+                   current_book->content_dir, path_len, path_start);
           chapter->number = current_book->num_chapters;
 
           LOG_DBG("chapter path: %s", chapter->path);
@@ -533,86 +531,134 @@ bool is_html(char *path)
 
 static size_t _epub_parse_html(const char *input, size_t input_len, char *output, size_t output_max_len)
 {
-    size_t input_idx = 0;
-    size_t output_idx = 0;
-    bool in_tag = false;
-    const char* ignored_tags[] = {"script", "style", "head", "header"};
+  size_t input_idx = 0;
+  size_t output_idx = 0;
+  bool in_tag = false;
+  const char *ignored_tags[] = {"script", "style", "head", "header"};
 
-    while (input_idx < input_len && output_idx < (output_max_len - 1)) {
-        if (in_tag) {
-            if (input[input_idx] == '>') {
-                in_tag = false;
-            }
-        } else if (input[input_idx] == '<') {
-            in_tag = true;
+  while (input_idx < input_len && output_idx < (output_max_len - 1))
+  {
+    if (in_tag)
+    {
+      if (input[input_idx] == '>')
+      {
+        in_tag = false;
+      }
+    }
+    else if (input[input_idx] == '<')
+    {
+      in_tag = true;
 
-            // Handle tags that force a newline
-            if (strncmp(&input[input_idx], "</p>", 4) == 0 ||
-                strncmp(&input[input_idx], "</div>", 6) == 0 ||
-                strncmp(&input[input_idx], "</li>", 5) == 0 ||
-                strncmp(&input[input_idx], "</h1>", 5) == 0 ||
-                strncmp(&input[input_idx], "</h2>", 5) == 0 ||
-                strncmp(&input[input_idx], "</h3>", 5) == 0 ||
-                strncmp(&input[input_idx], "<br", 3) == 0) {
-                // Trim trailing space before adding newline
-                if (output_idx > 0 && output[output_idx - 1] == ' ') {
-                    output_idx--;
-                }
-                // Add newline if not already on one
-                if (output_idx > 0 && output[output_idx - 1] != '\n') {
-                    output[output_idx++] = '\n';
-                }
-            } else {
-                 // Check for ignored tags and skip their content
-                for (size_t i = 0; i < sizeof(ignored_tags) / sizeof(ignored_tags[0]); ++i) {
-                    char open_tag[16];
-                    snprintf(open_tag, sizeof(open_tag), "<%s", ignored_tags[i]);
-                    if (strncmp(&input[input_idx], open_tag, strlen(open_tag)) == 0) {
-                        char close_tag[16];
-                        snprintf(close_tag, sizeof(close_tag), "</%s>", ignored_tags[i]);
-                        const char *end = strstr(&input[input_idx], close_tag);
-                        if (end) {
-                            input_idx = (end - input) + strlen(close_tag) - 1; // -1 for loop increment
-                            in_tag = false; // We are now outside of any tag
-                            goto loop_end;
-                        }
-                    }
-                }
-            }
-        } else { // Not in a tag, this is content
-            if (isspace((unsigned char)input[input_idx])) {
-                // Collapse whitespace: only add a space if the last char wasn't whitespace and not at the beginning.
-                if (output_idx > 0 && output[output_idx - 1] != ' ' && output[output_idx - 1] != '\n') {
-                    output[output_idx++] = ' ';
-                }
-            } else if (input[input_idx] == '&') {
-                // Handle common HTML entities
-                if (strncmp(&input[input_idx], "&nbsp;", 6) == 0) {
-                    if (output_idx > 0 && output[output_idx - 1] != ' ' && output[output_idx - 1] != '\n') {
-                        output[output_idx++] = ' ';
-                    }
-                    input_idx += 5;
-                } else if (strncmp(&input[input_idx], "&amp;", 5) == 0) { output[output_idx++] = '&'; input_idx += 4; }
-                else if (strncmp(&input[input_idx], "&lt;", 4) == 0) { output[output_idx++] = '<'; input_idx += 3; }
-                else if (strncmp(&input[input_idx], "&gt;", 4) == 0) { output[output_idx++] = '>'; input_idx += 3; }
-                else if (strncmp(&input[input_idx], "&quot;", 6) == 0) { output[output_idx++] = '"'; input_idx += 5; }
-                else if (strncmp(&input[input_idx], "&apos;", 6) == 0) { output[output_idx++] = '\''; input_idx += 5; }
-                else { output[output_idx++] = input[input_idx]; }
-            } else {
-                output[output_idx++] = input[input_idx];
-            }
+      // Handle tags that force a newline
+      if (strncmp(&input[input_idx], "</p>", 4) == 0 ||
+          strncmp(&input[input_idx], "</div>", 6) == 0 ||
+          strncmp(&input[input_idx], "</li>", 5) == 0 ||
+          strncmp(&input[input_idx], "</h1>", 5) == 0 ||
+          strncmp(&input[input_idx], "</h2>", 5) == 0 ||
+          strncmp(&input[input_idx], "</h3>", 5) == 0 ||
+          strncmp(&input[input_idx], "<br", 3) == 0)
+      {
+        // Trim trailing space before adding newline
+        if (output_idx > 0 && output[output_idx - 1] == ' ')
+        {
+          output_idx--;
         }
-    loop_end:
-        input_idx++;
+        // Add newline if not already on one
+        if (output_idx > 0 && output[output_idx - 1] != '\n')
+        {
+          output[output_idx++] = '\n';
+        }
+      }
+      else
+      {
+        // Check for ignored tags and skip their content
+        for (size_t i = 0; i < sizeof(ignored_tags) / sizeof(ignored_tags[0]); ++i)
+        {
+          char open_tag[16];
+          snprintf(open_tag, sizeof(open_tag), "<%s", ignored_tags[i]);
+          if (strncmp(&input[input_idx], open_tag, strlen(open_tag)) == 0)
+          {
+            char close_tag[16];
+            snprintf(close_tag, sizeof(close_tag), "</%s>", ignored_tags[i]);
+            const char *end = strstr(&input[input_idx], close_tag);
+            if (end)
+            {
+              input_idx = (end - input) + strlen(close_tag) - 1; // -1 for loop increment
+              in_tag = false;                                    // We are now outside of any tag
+              goto loop_end;
+            }
+          }
+        }
+      }
     }
-
-    // Trim trailing whitespace from the final output
-    while (output_idx > 0 && isspace((unsigned char)output[output_idx - 1])) {
-        output_idx--;
+    else
+    { // Not in a tag, this is content
+      if (isspace((unsigned char)input[input_idx]))
+      {
+        // Collapse whitespace: only add a space if the last char wasn't whitespace and not at the beginning.
+        if (output_idx > 0 && output[output_idx - 1] != ' ' && output[output_idx - 1] != '\n')
+        {
+          output[output_idx++] = ' ';
+        }
+      }
+      else if (input[input_idx] == '&')
+      {
+        // Handle common HTML entities
+        if (strncmp(&input[input_idx], "&nbsp;", 6) == 0)
+        {
+          if (output_idx > 0 && output[output_idx - 1] != ' ' && output[output_idx - 1] != '\n')
+          {
+            output[output_idx++] = ' ';
+          }
+          input_idx += 5;
+        }
+        else if (strncmp(&input[input_idx], "&amp;", 5) == 0)
+        {
+          output[output_idx++] = '&';
+          input_idx += 4;
+        }
+        else if (strncmp(&input[input_idx], "&lt;", 4) == 0)
+        {
+          output[output_idx++] = '<';
+          input_idx += 3;
+        }
+        else if (strncmp(&input[input_idx], "&gt;", 4) == 0)
+        {
+          output[output_idx++] = '>';
+          input_idx += 3;
+        }
+        else if (strncmp(&input[input_idx], "&quot;", 6) == 0)
+        {
+          output[output_idx++] = '"';
+          input_idx += 5;
+        }
+        else if (strncmp(&input[input_idx], "&apos;", 6) == 0)
+        {
+          output[output_idx++] = '\'';
+          input_idx += 5;
+        }
+        else
+        {
+          output[output_idx++] = input[input_idx];
+        }
+      }
+      else
+      {
+        output[output_idx++] = input[input_idx];
+      }
     }
+  loop_end:
+    input_idx++;
+  }
 
-    output[output_idx] = '\0';
-    return output_idx;
+  // Trim trailing whitespace from the final output
+  while (output_idx > 0 && isspace((unsigned char)output[output_idx - 1]))
+  {
+    output_idx--;
+  }
+
+  output[output_idx] = '\0';
+  return output_idx;
 }
 
 static int epub_prettify_full_chapter(const char *raw_content, size_t raw_content_size, char **prettified_content_out, size_t *prettified_content_size_out)
@@ -652,7 +698,8 @@ int epub_get_next_chapter()
     current_book->chapter_prettified_content_size = 0;
   }
 
-  while(true) {
+  while (true)
+  {
     if (current_book->state.chapter >= current_book->num_chapters - 1)
     {
       LOG_DBG("Book finished!");
@@ -663,16 +710,20 @@ int epub_get_next_chapter()
     {
       // Set linked list pointer to the first element
       current_book->current_chapter = current_book->chapter_list;
-    } else {
+    }
+    else
+    {
       current_book->current_chapter = current_book->current_chapter->next;
     }
 
-    if (current_book->current_chapter == NULL) {
+    if (current_book->current_chapter == NULL)
+    {
       LOG_DBG("Book finished!");
       return -ENODATA;
     }
 
     current_book->state.chapter++;
+    current_book->state.page = 0;
 
     if (!is_html(current_book->current_chapter->chapter->path))
     {
@@ -707,10 +758,10 @@ int epub_get_next_chapter()
         LOG_ERR("Failed to prettify chapter: %s", current_book->current_chapter->chapter->path);
         return ret;
       }
-      
-      current_book->state.file_offset = 0;
+
       LOG_DBG("Prettified chapter size: %zu", current_book->chapter_prettified_content_size);
-      if (current_book->chapter_prettified_content_size > 0) {
+      if (current_book->chapter_prettified_content_size > 0)
+      {
         break; // Found a chapter with content
       }
     }
@@ -763,7 +814,8 @@ int epub_get_prev_chapter()
     current_book->chapter_prettified_content_size = 0;
   }
 
-  while(true) {
+  while (true)
+  {
     if (current_book->state.chapter == 0)
     {
       LOG_DBG("Already at the beginning");
@@ -774,6 +826,7 @@ int epub_get_prev_chapter()
     {
       current_book->current_chapter = current_book->current_chapter->prev;
       current_book->state.chapter--;
+      current_book->state.page = 0;
 
       if (!is_html(current_book->current_chapter->chapter->path))
       {
@@ -798,7 +851,7 @@ int epub_get_prev_chapter()
             current_book->chapter_raw_content_size,
             &current_book->chapter_prettified_content,
             &current_book->chapter_prettified_content_size);
-        
+
         // Free raw content after prettification as it's no longer needed
         free(current_book->chapter_raw_content);
         current_book->chapter_raw_content = NULL;
@@ -808,12 +861,12 @@ int epub_get_prev_chapter()
           LOG_ERR("Failed to prettify chapter: %s", current_book->current_chapter->chapter->path);
           return ret;
         }
-        
-        current_book->state.file_offset = 0;
+
         LOG_DBG("Prettified chapter size: %zu", current_book->chapter_prettified_content_size);
         LOG_DBG("Opening previous file %s", current_book->current_chapter->chapter->path);
 
-        if (current_book->chapter_prettified_content_size > 0) {
+        if (current_book->chapter_prettified_content_size > 0)
+        {
           break; // Found a chapter with content
         }
       }
@@ -824,10 +877,11 @@ int epub_get_prev_chapter()
 
 const char *epub_get_current_chapter_content(void)
 {
-    if (current_book) {
-        return current_book->chapter_prettified_content;
-    }
-    return NULL;
+  if (current_book)
+  {
+    return current_book->chapter_prettified_content;
+  }
+  return NULL;
 }
 
 int epub_free_current_book_resources()
@@ -852,10 +906,10 @@ int epub_free_current_book_resources()
     current_book->state.title = NULL;
   }
 
-  if (current_book->root_dir)
+  if (current_book->content_dir)
   {
-    free(current_book->root_dir);
-    current_book->root_dir = NULL;
+    free(current_book->content_dir);
+    current_book->content_dir = NULL;
   }
 
   if (current_book->chapter_raw_content)
@@ -927,7 +981,7 @@ int epub_open_book(book_entry_t *book)
   LOG_DBG("epub_open_book: title strdup'd");
 
   current_book->state.chapter = -1;
-  current_book->state.file_offset = 0;
+  current_book->state.page = 0;
   current_book->num_chapters = 0;
   current_book->chapter_list = NULL;
   current_book->current_chapter = NULL;
@@ -937,17 +991,17 @@ int epub_open_book(book_entry_t *book)
   current_book->chapter_prettified_content = NULL;
   current_book->chapter_prettified_content_size = 0;
 
-  current_book->root_dir = strdup(book->content_dir);
-  if (current_book->root_dir == NULL)
+  current_book->content_dir = strdup(book->content_dir);
+  if (current_book->content_dir == NULL)
   {
-    LOG_ERR("epub_open_book: Failed to strdup root_dir");
+    LOG_ERR("epub_open_book: Failed to strdup content_dir");
     free(current_book->state.title);
     free(current_book);
     current_book = NULL;
     k_mutex_unlock(&epub_mutex);
     return -ENOMEM;
   }
-  LOG_DBG("epub_open_book: root_dir strdup'd");
+  LOG_DBG("epub_open_book: content_dir strdup'd");
 
   epub_parse_chapter_files(book->entry_point);
   LOG_DBG("epub_open_book: Chapter files parsed");
@@ -979,8 +1033,6 @@ int epub_restore_book()
 
   LOG_DBG("Restore title %s", current_book->state.title);
   book = epub_get_book_entry_for_title(current_book->state.title);
-  free(current_book->state.title);
-  current_book->state.title = strdup(book->title);
 
   current_book->num_chapters = 0;
   current_book->chapter_list = NULL;
@@ -990,7 +1042,7 @@ int epub_restore_book()
   current_book->chapter_raw_content_size = 0;
   current_book->chapter_prettified_content = NULL;
   current_book->chapter_prettified_content_size = 0;
-  current_book->root_dir = strdup(book->content_dir);
+  current_book->content_dir = strdup(book->content_dir);
 
   epub_parse_chapter_files(book->entry_point);
 
@@ -1026,7 +1078,7 @@ int epub_restore_book()
     free(current_book->chapter_raw_content);
     current_book->chapter_raw_content = NULL;
 
-    LOG_DBG("Restored chapter: %s, prettified size: %zu, offset: %zu", current_book->current_chapter->chapter->path, current_book->chapter_prettified_content_size, current_book->state.file_offset);
+    LOG_DBG("Restored chapter: %s, prettified size: %zu, page: %zu", current_book->current_chapter->chapter->path, current_book->chapter_prettified_content_size, current_book->state.page);
   }
   else if (current_book->current_chapter && !is_html(current_book->current_chapter->chapter->path))
   {
@@ -1051,10 +1103,6 @@ int epub_destroy_book_list()
       if (current->book->entry_point)
       {
         free(current->book->entry_point);
-      }
-      if (current->book->root_dir)
-      {
-        free(current->book->root_dir);
       }
       if (current->book->content_dir)
       {
