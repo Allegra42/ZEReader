@@ -43,32 +43,6 @@ typedef enum
 void ui_init(context_t *context);
 
 /**
- * @brief Initialize UI related peripherals defined in the device tree.
- *
- * @retval 0 on success.
- * @retval negative on error.
- */
-int zereader_initialize_peripherals();
-
-/**
- * @brief Setup and configure the control buttons.
- *
- * @param[in] context The UI context.
- */
-void zereader_setup_control_buttons(context_t *context);
-
-/**
- * @brief Setup the page UI elements.
- *
- */
-void zereader_setup_page();
-
-/**
- * @brief Setup and configure the status bar.
- */
-void zereader_setup_statusbar();
-
-/**
  * @brief Clean out the page contents.
  */
 void zereader_clean_page();
@@ -101,13 +75,6 @@ void zereader_scroll_up(void);
 void zereader_scroll_down(void);
 
 /**
- * @brief Set the scroll position of the text view.
- *
- * @param[in] pos The scroll position to set.
- */
-void zereader_set_scroll_pos(size_t pos);
-
-/**
  * @brief Show the book selection menu.
  */
 void zereader_show_bookmenu(context_t *context, const char *booklist);
@@ -118,19 +85,9 @@ void zereader_show_bookmenu(context_t *context, const char *booklist);
 void zereader_show_logo();
 
 /**
- * @brief Clean out the logo.
- */
-void zereader_clean_logo();
-
-/**
  * @brief Show a clean shutdown screen.
  */
 void zereader_show_shutdown_screen();
-
-/**
- * @brief Turn off display blanking
- */
-void zereader_display_blanking_off();
 
 /**
  * @brief Lock the LVGL mutex.

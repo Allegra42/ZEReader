@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+#include <device_management/device_management.h>
 #include <event_handler/event_handler.h>
 #include <ui/ui.h>
 #include <ui/ui_style.h>
@@ -19,13 +20,6 @@
 LOG_MODULE_REGISTER(ui, CONFIG_ZEREADER_LOG_LEVEL);
 
 K_MUTEX_DEFINE(lvgl_mutex);
-
-const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
-
-// Currently, only one ADC channel is defined in the device tree.
-// Thus, the ADC channel 3, bound to 1/3 VSYS is indexed 0.
-// static const struct adc_dt_spec
-const struct adc_dt_spec adc_chan3_vsys = ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 0);
 
 static lv_obj_t *text_area;
 static lv_obj_t *logo;
@@ -197,45 +191,8 @@ void zereader_setup_statusbar()
   zereader_status_bar_create(lv_screen_active());
 }
 
-int zereader_initialize_peripherals()
-{
-  // Initialize the choosen zephyr,display device
-  // -> Make the device tree description available for the software part
-  if (!device_is_ready(display_dev))
-  {
-    LOG_ERR("Device not ready, aborting...");
-    return UI_ERROR_DISPLAY_NOT_READY;
-  }
-
-  // Make the FIRST ok zephyr,lvgl-button-input node available to the software part
-  static const struct device *lvgl_btn_dev;
-  lvgl_btn_dev = DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_lvgl_button_input));
-  if (!device_is_ready(lvgl_btn_dev))
-  {
-    LOG_ERR("Device not ready, aborting...");
-    return UI_ERROR_LVGL_INPUT_NOT_READY;
-  }
-
-  /* Configure channels individually prior to sampling. */
-  if (!adc_is_ready_dt(&adc_chan3_vsys))
-  {
-    printk("ADC controller device %s not ready\n", adc_chan3_vsys.dev->name);
-    return UI_ERROR_ADC_CONTROLLER_NOT_READY;
-  }
-
-  if (adc_channel_setup_dt(&adc_chan3_vsys) < 0)
-  {
-    printk("Could not setup channel #3 (ADC VSYS)\n");
-    return UI_ERROR_ADC_CHANNEL_SETUP_FAILED;
-  }
-
-  return UI_SUCCESS;
-}
-
 void zereader_setup_page()
 {
-  LOG_DBG("Setup page");
-
   text_area = zereader_text_area_create(lv_screen_active(), &style_font_notoserif_14);
   page_ctr = 0;
 }
@@ -247,9 +204,9 @@ void screen_health()
   if (page_ctr >= UI_SCREEN_REFRESH_PAGES)
   {
     page_ctr = 0;
-    display_blanking_on(display_dev);
+    dev_mgmt_display_blanking_on();
     lv_timer_handler();
-    display_blanking_off(display_dev);
+    dev_mgmt_display_blanking_off();
   }
 }
 
@@ -287,15 +244,6 @@ void zereader_scroll_up()
   lv_obj_scroll_by(text_area, 0, +UI_PAGE_SIZE, LV_ANIM_OFF);
 }
 
-void zereader_clean_page()
-{
-  zereader_clean_logo();
-  lv_textarea_set_text(text_area, " ");
-  lv_timer_handler();
-  display_blanking_on(display_dev);
-  display_blanking_off(display_dev);
-}
-
 void zereader_show_logo()
 {
   logo = zereader_logo_create(lv_screen_active());
@@ -310,18 +258,22 @@ void zereader_clean_logo()
   }
 }
 
+void zereader_clean_page()
+{
+  zereader_clean_logo();
+  lv_textarea_set_text(text_area, " ");
+  lv_timer_handler();
+  dev_mgmt_display_blanking_on();
+  dev_mgmt_display_blanking_off();
+}
+
 void zereader_show_shutdown_screen()
 {
   lv_obj_clean(lv_screen_active());
   lv_timer_handler();
-  display_blanking_on(display_dev);
-  display_blanking_off(display_dev);
+  dev_mgmt_display_blanking_on();
+  dev_mgmt_display_blanking_off();
   zereader_show_logo();
-}
-
-void zereader_display_blanking_off()
-{
-  display_blanking_off(display_dev);
 }
 
 void zereader_ui_lock(void)

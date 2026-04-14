@@ -13,6 +13,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/input/input.h>
 
+#include <device_management/device_management.h>
 #include <event_handler/event_handler.h>
 #include <ui/ui.h>
 
@@ -76,7 +77,7 @@ int main(void)
   };
   app_post_event(&event_epub_init);
 
-  if (zereader_initialize_peripherals() < 0)
+  if (dev_mgmt_init() < 0)
   {
     LOG_ERR("Setup peripherals failed!");
     return 0;
@@ -99,7 +100,7 @@ int main(void)
   zereader_show_logo();
   lv_timer_handler();
 
-  zereader_display_blanking_off();
+  dev_mgmt_display_blanking_off();
   zereader_clean_page();
 
   app_event_t event_restore_book = {

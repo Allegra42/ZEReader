@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-zephyr_library()
+zephyr_library_named(ui)
 zephyr_library_sources(
   context.c
   ui.c
