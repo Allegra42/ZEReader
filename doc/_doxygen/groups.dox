@@ -5,10 +5,10 @@
  */
 
 /**
- * @defgroup sd SD-Card library
+ * @defgroup dev_mgmt Device Management
  * @{
  *
- * @brief SD-Card library
+ * @brief Device Management library
  *
  * @}
  */
@@ -18,6 +18,24 @@
  * @{
  *
  * @brief EPUB library
+ *
+ * @}
+ */
+
+/**
+ * @defgroup event Event Handler library
+ * @{
+ *
+ * @brief Event Handler library
+ *
+ * @}
+ */
+
+/**
+ * @defgroup sd SD-Card library
+ * @{
+ *
+ * @brief SD-Card library
  *
  * @}
  */
