@@ -7,7 +7,7 @@ name: Build ZEReader documentation
 on: [push, pull_request, workflow_dispatch]
 
 env:
-  DOXYGEN_VERSION: 1.14.0
+  DOXYGEN_VERSION: 1.16.1
 
 jobs:
   build:
