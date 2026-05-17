@@ -24,7 +24,7 @@
  */
 
 #define UI_BOOK_LIST_STR_SIZE 1000
-#define UI_SCREEN_REFRESH_PAGES 8
+#define UI_SCREEN_REFRESH_PAGES 10
 
 typedef enum
 {
@@ -75,12 +75,15 @@ void zereader_scroll_up(void);
 void zereader_scroll_down(void);
 
 /**
- * @brief Show the book selection menu.
+ * @brief Shows the book selection menu.
+ *
+ * @param[in] context The reader's system context.
+ * @param[in] booklist The preformatted book list as needed for the LVGL roller.
  */
 void zereader_show_bookmenu(context_t *context, const char *booklist);
 
 /**
- * @brief Show the configured logo.
+ * @brief Shows the configured logo.
  */
 void zereader_show_logo();
 
@@ -88,6 +91,23 @@ void zereader_show_logo();
  * @brief Show a clean shutdown screen.
  */
 void zereader_show_shutdown_screen();
+
+/**
+ * @brief Updates the chapter status in the status bar.
+ *
+ * @param current_chapter Number of the current chapter.
+ * @param num_chapters Number of chapters in the book.
+ * @param title Chapter title.
+ */
+void zereader_update_chapter_status(uint32_t current_chapter, uint32_t num_chapters, char *title);
+
+/**
+ * @brief Shows the chapter selection menu/overview.
+ *
+ * @param[in] context The reader's system context.
+ * @param[in] chapterlist The preformatted chapter list as needed for the LVGL roller.
+ */
+void zereader_show_chaptermenu(context_t *context, const char *chapterlist);
 
 /**
  * @brief Lock the LVGL mutex.

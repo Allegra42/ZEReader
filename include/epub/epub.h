@@ -125,6 +125,11 @@ typedef struct
   size_t number;
 
   /**
+   * The chapter's title
+   */
+  char *title;
+
+  /**
    * The chapter's file path.
    */
   char *path;
@@ -234,6 +239,28 @@ typedef struct
 } current_book_t;
 
 /**
+ * @brief Holds the chapter status.
+ */
+typedef struct
+{
+  /**
+   * The count of chapters in a book.
+   */
+  uint32_t count;
+
+  /**
+   * The number of the current chapter.
+   */
+  uint32_t current;
+
+  /**
+   * The title of the current chapter.
+   */
+  char *title;
+
+} chapter_status_t;
+
+/**
  * @brief Free all dynamically allocated resources within the book list.
  *
  * @retval 0 on success.
@@ -291,6 +318,15 @@ int epub_open_book(book_entry_t *book);
 int epub_restore_book();
 
 /**
+ * @brief Switch to a given chapter in a book
+ *
+ * @param[in] chapter Number of the chapter to switch to.
+ *
+ * @retval 0 on success.
+ */
+int epub_switch_chapter(uint32_t chapter);
+
+/**
  * @brief Get the full content of the current prettified chapter.
  *
  * @returns A pointer to the chapter content string. Returns NULL if no book/chapter is loaded.
@@ -302,14 +338,29 @@ const char *epub_get_current_chapter_content(void);
  *
  * @retval 0 on success.
  */
-int epub_get_next_chapter();
+int epub_get_next_chapter(void);
 
 /**
  * @brief Go to the previous chapter.
  *
  * @retval 0 on success.
  */
-int epub_get_prev_chapter();
+int epub_get_prev_chapter(void);
+
+/**
+ * @brief Get the chapter status.
+ * - count of chapters
+ * - number of current chapter
+ * - chapter title
+ */
+chapter_status_t *epub_get_chapter_status(void);
+
+/**
+ * @brief Get the chapter list for the current book
+ *
+ * @returns A pointer to the chapter list.
+ */
+chapter_list_t *epub_get_chapter_list();
 
 /**
  * @brief Update the current book's chapter page counter.

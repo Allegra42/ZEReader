@@ -39,6 +39,12 @@ char *strndup(const char *s, size_t n)
   return (char *)memcpy(new, s, len);
 }
 
+bool is_html(char *path)
+{
+  // Accepts .htm, .html, and .htmlx files as valid HTML
+  return strstr(path, "htm");
+}
+
 book_entry_t *epub_add_book_entry()
 {
   book_list_t *node = (book_list_t *)malloc(sizeof(book_list_t));
@@ -468,6 +474,7 @@ int epub_parse_chapter_files(const char *content_opf)
     {
       char *path_start = found_href + len_search_tag;
       char *path_end = strchr(path_start, '"');
+      char *html = strstr(path_start, "htm");
 
       if (path_end != NULL)
       {
@@ -479,7 +486,7 @@ int epub_parse_chapter_files(const char *content_opf)
           buffer_ptr = path_end + 1; // Skip this long path and continue
           continue;
         }
-        else if (path_len > 0)
+        else if (path_len > 0 && path_end > html)
         {
           chapter_entry_t *chapter = epub_add_chapter_entry();
           if (chapter == NULL)
@@ -500,7 +507,9 @@ int epub_parse_chapter_files(const char *content_opf)
                    current_book->content_dir, path_len, path_start);
           chapter->number = current_book->num_chapters;
 
-          LOG_DBG("chapter path: %s", chapter->path);
+          chapter->title = epub_content_opf_metadata_get_element("</title", chapter->path, 500);
+
+          LOG_DBG("chapter: %s, path: %s", chapter->title, chapter->path);
           current_book->num_chapters++;
         }
         buffer_ptr = path_end + 1;
@@ -521,12 +530,6 @@ int epub_parse_chapter_files(const char *content_opf)
 
   free(file_content); // Free the dynamically allocated buffer
   return ret;
-}
-
-bool is_html(char *path)
-{
-  // Accepts .htm, .html, and .htmlx files as valid HTML
-  return strstr(path, "htm");
 }
 
 static size_t _epub_parse_html(const char *input, size_t input_len, char *output, size_t output_max_len)
@@ -725,53 +728,54 @@ int epub_get_next_chapter()
     current_book->state.chapter++;
     current_book->state.page = 0;
 
-    if (!is_html(current_book->current_chapter->chapter->path))
+    // if (!is_html(current_book->current_chapter->chapter->path))
+    // {
+    //   continue;
+    // }
+    // else
+    // {
+    // Load the entire chapter raw content
+    current_book->chapter_raw_content = sd_read_whole_file(
+        current_book->current_chapter->chapter->path,
+        &current_book->chapter_raw_content_size);
+    if (!current_book->chapter_raw_content)
     {
-      continue;
+      LOG_ERR("Failed to read whole chapter file: %s", current_book->current_chapter->chapter->path);
+      return -EIO;
     }
-    else
+    LOG_DBG("Loaded raw chapter: %s, size: %zu", current_book->current_chapter->chapter->path, current_book->chapter_raw_content_size);
+
+    // Prettify the entire chapter content
+    int ret = epub_prettify_full_chapter(
+        current_book->chapter_raw_content,
+        current_book->chapter_raw_content_size,
+        &current_book->chapter_prettified_content,
+        &current_book->chapter_prettified_content_size);
+
+    // Free raw content after prettification as it's no longer needed
+    free(current_book->chapter_raw_content);
+    current_book->chapter_raw_content = NULL;
+
+    if (ret != 0)
     {
-      // Load the entire chapter raw content
-      current_book->chapter_raw_content = sd_read_whole_file(
-          current_book->current_chapter->chapter->path,
-          &current_book->chapter_raw_content_size);
-      if (!current_book->chapter_raw_content)
-      {
-        LOG_ERR("Failed to read whole chapter file: %s", current_book->current_chapter->chapter->path);
-        return -EIO;
-      }
-      LOG_DBG("Loaded raw chapter: %s, size: %zu", current_book->current_chapter->chapter->path, current_book->chapter_raw_content_size);
+      LOG_ERR("Failed to prettify chapter: %s", current_book->current_chapter->chapter->path);
+      return ret;
+    }
 
-      // Prettify the entire chapter content
-      int ret = epub_prettify_full_chapter(
-          current_book->chapter_raw_content,
-          current_book->chapter_raw_content_size,
-          &current_book->chapter_prettified_content,
-          &current_book->chapter_prettified_content_size);
-
-      // Free raw content after prettification as it's no longer needed
-      free(current_book->chapter_raw_content);
-      current_book->chapter_raw_content = NULL;
-
-      if (ret != 0)
-      {
-        LOG_ERR("Failed to prettify chapter: %s", current_book->current_chapter->chapter->path);
-        return ret;
-      }
-
-      LOG_DBG("Prettified chapter size: %zu", current_book->chapter_prettified_content_size);
-      if (current_book->chapter_prettified_content_size > 0)
-      {
-        break; // Found a chapter with content
-      }
+    LOG_DBG("Prettified chapter size: %zu", current_book->chapter_prettified_content_size);
+    if (current_book->chapter_prettified_content_size > 0)
+    {
+      break; // Found a chapter with content
     }
   }
+  // }
   return 0;
 }
 
 int epub_get_chapter(size_t index)
 {
   LOG_DBG("Get chapter %d", index);
+
   if (current_book->state.chapter >= current_book->num_chapters - 1)
   {
     LOG_DBG("Book finished!");
@@ -828,51 +832,62 @@ int epub_get_prev_chapter()
       current_book->state.chapter--;
       current_book->state.page = 0;
 
-      if (!is_html(current_book->current_chapter->chapter->path))
+      // if (!is_html(current_book->current_chapter->chapter->path))
+      // {
+      //   continue;
+      // }
+      // else
+      // {
+      // Load the entire chapter raw content
+      current_book->chapter_raw_content = sd_read_whole_file(
+          current_book->current_chapter->chapter->path,
+          &current_book->chapter_raw_content_size);
+      if (!current_book->chapter_raw_content)
       {
-        continue;
+        LOG_ERR("Failed to read whole chapter file: %s", current_book->current_chapter->chapter->path);
+        return -EIO;
       }
-      else
+      LOG_DBG("Loaded raw chapter: %s, size: %zu", current_book->current_chapter->chapter->path, current_book->chapter_raw_content_size);
+
+      // Prettify the entire chapter content
+      int ret = epub_prettify_full_chapter(
+          current_book->chapter_raw_content,
+          current_book->chapter_raw_content_size,
+          &current_book->chapter_prettified_content,
+          &current_book->chapter_prettified_content_size);
+
+      // Free raw content after prettification as it's no longer needed
+      free(current_book->chapter_raw_content);
+      current_book->chapter_raw_content = NULL;
+
+      if (ret != 0)
       {
-        // Load the entire chapter raw content
-        current_book->chapter_raw_content = sd_read_whole_file(
-            current_book->current_chapter->chapter->path,
-            &current_book->chapter_raw_content_size);
-        if (!current_book->chapter_raw_content)
-        {
-          LOG_ERR("Failed to read whole chapter file: %s", current_book->current_chapter->chapter->path);
-          return -EIO;
-        }
-        LOG_DBG("Loaded raw chapter: %s, size: %zu", current_book->current_chapter->chapter->path, current_book->chapter_raw_content_size);
-
-        // Prettify the entire chapter content
-        int ret = epub_prettify_full_chapter(
-            current_book->chapter_raw_content,
-            current_book->chapter_raw_content_size,
-            &current_book->chapter_prettified_content,
-            &current_book->chapter_prettified_content_size);
-
-        // Free raw content after prettification as it's no longer needed
-        free(current_book->chapter_raw_content);
-        current_book->chapter_raw_content = NULL;
-
-        if (ret != 0)
-        {
-          LOG_ERR("Failed to prettify chapter: %s", current_book->current_chapter->chapter->path);
-          return ret;
-        }
-
-        LOG_DBG("Prettified chapter size: %zu", current_book->chapter_prettified_content_size);
-        LOG_DBG("Opening previous file %s", current_book->current_chapter->chapter->path);
-
-        if (current_book->chapter_prettified_content_size > 0)
-        {
-          break; // Found a chapter with content
-        }
+        LOG_ERR("Failed to prettify chapter: %s", current_book->current_chapter->chapter->path);
+        return ret;
       }
+
+      LOG_DBG("Prettified chapter size: %zu", current_book->chapter_prettified_content_size);
+      LOG_DBG("Opening previous file %s", current_book->current_chapter->chapter->path);
+
+      if (current_book->chapter_prettified_content_size > 0)
+      {
+        break; // Found a chapter with content
+      }
+      // }
     }
   }
   return 0;
+}
+
+chapter_status_t *epub_get_chapter_status(void)
+{
+  chapter_status_t *status = (chapter_status_t *)malloc(sizeof(chapter_status_t));
+
+  status->count = current_book->num_chapters;
+  status->current = current_book->state.chapter;
+  status->title = current_book->current_chapter->chapter->title;
+
+  return status;
 }
 
 const char *epub_get_current_chapter_content(void)
@@ -1049,7 +1064,8 @@ int epub_restore_book()
   int ret = epub_get_chapter(current_book->state.chapter);
 
   // Load the entire chapter raw content for the restored chapter
-  if (current_book->current_chapter && is_html(current_book->current_chapter->chapter->path))
+  // if (current_book->current_chapter && is_html(current_book->current_chapter->chapter->path))
+  if (current_book->current_chapter)
   {
     current_book->chapter_raw_content = sd_read_whole_file(
         current_book->current_chapter->chapter->path,
@@ -1080,9 +1096,70 @@ int epub_restore_book()
 
     LOG_DBG("Restored chapter: %s, prettified size: %zu, page: %zu", current_book->current_chapter->chapter->path, current_book->chapter_prettified_content_size, current_book->state.page);
   }
-  else if (current_book->current_chapter && !is_html(current_book->current_chapter->chapter->path))
+  // else if (current_book->current_chapter && !is_html(current_book->current_chapter->chapter->path))
+  else if (current_book->current_chapter)
   {
     // If the restored chapter is not HTML, advance to the next HTML chapter
+    epub_get_next_chapter();
+  }
+  // else current_book->current_chapter is NULL, error already logged by epub_get_chapter_state()
+  k_mutex_unlock(&epub_mutex);
+  return ret;
+}
+
+int epub_switch_chapter(uint32_t chapter)
+{
+  k_mutex_lock(&epub_mutex, K_FOREVER);
+
+  if (!current_book)
+  {
+    LOG_INF("No current book state found.");
+    k_mutex_unlock(&epub_mutex);
+    return -ENOENT;
+  }
+
+  int ret = epub_get_chapter(chapter);
+
+  current_book->state.chapter = chapter;
+  current_book->state.page = 0;
+
+  // Load the entire chapter raw content for the restored chapter
+  // if (current_book->current_chapter && is_html(current_book->current_chapter->chapter->path))
+  if (current_book->current_chapter)
+  {
+    current_book->chapter_raw_content = sd_read_whole_file(
+        current_book->current_chapter->chapter->path,
+        &current_book->chapter_raw_content_size);
+    if (!current_book->chapter_raw_content)
+    {
+      LOG_ERR("Failed to read whole chapter file for book: %s", current_book->current_chapter->chapter->path);
+      return -EIO;
+    }
+    LOG_DBG("Loaded raw chapter for: %s, size: %zu", current_book->current_chapter->chapter->path, current_book->chapter_raw_content_size);
+
+    // Prettify the entire chapter content
+    int pret_ret = epub_prettify_full_chapter(
+        current_book->chapter_raw_content,
+        current_book->chapter_raw_content_size,
+        &current_book->chapter_prettified_content,
+        &current_book->chapter_prettified_content_size);
+    if (pret_ret != 0)
+    {
+      LOG_ERR("Failed to prettify chapter for book: %s", current_book->current_chapter->chapter->path);
+      free(current_book->chapter_raw_content);
+      current_book->chapter_raw_content = NULL;
+      return pret_ret;
+    }
+    // Free raw content after prettification as it's no longer needed
+    free(current_book->chapter_raw_content);
+    current_book->chapter_raw_content = NULL;
+
+    LOG_DBG("Chapter: %s, prettified size: %zu, page: %zu", current_book->current_chapter->chapter->path, current_book->chapter_prettified_content_size, current_book->state.page);
+  }
+  // else if (current_book->current_chapter && !is_html(current_book->current_chapter->chapter->path))
+  else if (current_book->current_chapter)
+  {
+    // If the chapter is not HTML, advance to the next HTML chapter
     epub_get_next_chapter();
   }
   // else current_book->current_chapter is NULL, error already logged by epub_get_chapter_state()

@@ -16,4 +16,18 @@
  */
 void zereader_status_bar_create(lv_obj_t *parent);
 
+/**
+ * @brief Updates the chapter status in the status bar.
+ *
+ * @param current_chapter Number of the current chapter.
+ * @param num_chapter Number of chapters in the book.
+ *  * @param title Chapter title.
+ */
+void zereader_status_bar_update_chapter(uint32_t current_chapter, uint32_t num_chapter, char *title);
+
+/**
+ * @brief Clears the chapter status in the status bar.
+ */
+void zereader_status_bar_clear();
+
 #endif /* _UI_WIDGET_STATUS_BAR_H_ */
