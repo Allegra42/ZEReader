@@ -50,30 +50,30 @@ int main(void)
   app_events_init();
 
 #if defined(CONFIG_BUTTON_ONOFF)
-  LOG_DBG("Button On/Off configured!");
-  if (!gpio_is_ready_dt(&powercontrol_pin))
-  {
-    LOG_ERR("Device 'powercontrol_pin' is not ready, aborting...");
-    return 0;
-  }
+    LOG_DBG("Button On/Off configured!");
+    if (!gpio_is_ready_dt(&powercontrol_pin))
+    {
+      LOG_ERR("Device 'powercontrol_pin' is not ready, aborting...");
+      return 0;
+    }
 
-  if (gpio_pin_configure_dt(&powercontrol_pin, GPIO_OUTPUT_ACTIVE) < 0)
-  {
-    LOG_ERR("Device 'powercontrol_pin' could not be configured as an output!");
-    return -EACCES;
-  }
+    if (gpio_pin_configure_dt(&powercontrol_pin, GPIO_OUTPUT_ACTIVE) < 0)
+    {
+      LOG_ERR("Device 'powercontrol_pin' could not be configured as an output!");
+      return -EACCES;
+    }
 
-  if (!device_is_ready(longpress_dev))
-  {
-    LOG_ERR("Device 'longpress_dev' is not ready, aborting...");
-    return 0;
-  }
+    if (!device_is_ready(longpress_dev))
+    {
+      LOG_ERR("Device 'longpress_dev' is not ready, aborting...");
+      return 0;
+    }
 #endif // CONFIG_BUTTON_ONOFF
 
-  context_t context = CONTEXT_READING;
+  context_t context = CONTEXT_INIT;
   app_event_t event_epub_init = {
-    .type = APP_EVENT_EPUB_INIT,
-    .data.context.context = &context,
+      .type = APP_EVENT_EPUB_INIT,
+      .data.context.context = &context,
   };
   app_post_event(&event_epub_init);
 
@@ -86,15 +86,15 @@ int main(void)
   ui_init(&context);
 
 #if defined(CONFIG_BUTTON_ONOFF)
-  if (gpio_pin_set_dt(&powercontrol_pin, 1) < 0)
-  {
-    LOG_ERR("Unable to set 'powercontrol_pin'!");
-    return -EACCES;
-  }
-  else
-  {
-    LOG_DBG("ZEReader is now ON!");
-  }
+    if (gpio_pin_set_dt(&powercontrol_pin, 1) < 0)
+    {
+      LOG_ERR("Unable to set 'powercontrol_pin'!");
+      return -EACCES;
+    }
+    else
+    {
+      LOG_DBG("ZEReader is now ON!");
+    }
 #endif // CONFIG_BUTTON_ONOFF
 
   zereader_show_logo();
@@ -103,9 +103,10 @@ int main(void)
   dev_mgmt_display_blanking_off();
   zereader_clean_page();
 
+  context = CONTEXT_READING;
   app_event_t event_restore_book = {
-    .type = APP_EVENT_RESTORE_BOOK,
-    .data.context.context = &context,
+      .type = APP_EVENT_RESTORE_BOOK,
+      .data.context.context = &context,
   };
   app_post_event(&event_restore_book);
 

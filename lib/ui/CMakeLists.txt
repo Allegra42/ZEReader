@@ -8,7 +8,7 @@ zephyr_library_sources(
   ui.c
   ui_style.c
   widgets/button.c
-  widgets/book_menu.c
+  widgets/menu_list.c
   widgets/control_bar.c
   widgets/status_bar.c
   widgets/text_area.c

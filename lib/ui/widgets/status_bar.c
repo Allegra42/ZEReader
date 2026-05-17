@@ -11,13 +11,14 @@
 
 LOG_MODULE_REGISTER(status_bar, CONFIG_ZEREADER_LOG_LEVEL);
 
-#define BATTERY_UPDATE_INTERVAL_MS  120000 // Update every 120 seconds
-#define BAT_MIN_MV                  3300   // 0% charge (3.3V)
-#define BAT_MAX_MV                  4200   // 100% charge (4.2V)
-#define BAT_CHARGER_MV              5000   // Threshold to detect charger (approx 5V)
+#define BATTERY_UPDATE_INTERVAL_MS 120000 // Update every 120 seconds
+#define BAT_MIN_MV 3300                   // 0% charge (3.3V)
+#define BAT_MAX_MV 4200                   // 100% charge (4.2V)
+#define BAT_CHARGER_MV 4900               // Threshold to detect charger (approx 5V)
 
 extern const struct adc_dt_spec adc_chan3_vsys;
 static lv_obj_t *bat_label;
+static lv_obj_t *chapter_label;
 
 static uint8_t get_battery_percentage(int32_t battery_mv)
 {
@@ -85,8 +86,22 @@ static void update_battery_cb(lv_timer_t *timer)
   }
 }
 
+void zereader_status_bar_update_chapter(uint32_t current_chapter, uint32_t num_chapter, char *title)
+{
+  lv_label_set_text_fmt(chapter_label, "Chapter %d of %d - %s", current_chapter, num_chapter, title);
+}
+
+void zereader_status_bar_clear()
+{
+  lv_label_set_text(chapter_label, "");
+}
+
 void zereader_status_bar_create(lv_obj_t *parent)
 {
+  chapter_label = lv_label_create(parent);
+  lv_obj_align(chapter_label, LV_ALIGN_TOP_LEFT, 10, 5);
+  lv_label_set_text(chapter_label, ""); // Initial State (empty)
+
   bat_label = lv_label_create(parent);
   lv_obj_align(bat_label, LV_ALIGN_TOP_RIGHT, -40, 5);
   lv_label_set_text(bat_label, "--% " LV_SYMBOL_BATTERY_EMPTY); // Initial State

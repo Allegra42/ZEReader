@@ -13,7 +13,7 @@
 #include <ui/widgets/status_bar.h>
 #include <ui/widgets/text_area.h>
 #include <ui/widgets/logo.h>
-#include <ui/widgets/book_menu.h>
+#include <ui/widgets/menu_list.h>
 
 #include <zephyr/logging/log.h>
 
@@ -24,6 +24,7 @@ K_MUTEX_DEFINE(lvgl_mutex);
 static lv_obj_t *text_area;
 static lv_obj_t *logo;
 static lv_obj_t *book_roller;
+static lv_obj_t *chapter_roller;
 
 static zereader_control_bar_t *control_bar;
 
@@ -46,7 +47,7 @@ static void book_roller_event_handler(lv_event_t *e)
 
     app_event_t event = {
         .type = APP_EVENT_BOOK_SELECTED,
-        .data.book_selected.book_id = book_nr,
+        .data.selected.id = book_nr,
     };
     app_post_event(&event);
   }
@@ -54,7 +55,34 @@ static void book_roller_event_handler(lv_event_t *e)
 
 void zereader_show_bookmenu(context_t *context, const char *booklist)
 {
-  book_roller = zereader_book_menu_create(lv_screen_active(), booklist, context, book_roller_event_handler);
+  book_roller = zereader_menu_list_create(lv_screen_active(), booklist, context, book_roller_event_handler);
+}
+
+static void chapter_roller_event_handler(lv_event_t *e)
+{
+  lv_event_code_t code = lv_event_get_code(e);
+  lv_obj_t *obj = lv_event_get_target_obj(e);
+  context_t *context = lv_event_get_user_data(e);
+
+  if (code == LV_EVENT_VALUE_CHANGED)
+  {
+    uint32_t chapter_nr = lv_roller_get_selected(obj);
+
+    *context = CONTEXT_READING;
+    zereader_control_bar_update_labels(control_bar, *context);
+    lv_obj_del(chapter_roller);
+    chapter_roller = NULL;
+
+    app_event_t event = {
+        .type = APP_EVENT_CHAPTER_SELECTED,
+        .data.selected.id = chapter_nr,
+    };
+    app_post_event(&event);
+  }
+}
+void zereader_show_chaptermenu(context_t *context, const char *chapterlist)
+{
+  chapter_roller = zereader_menu_list_create(lv_screen_active(), chapterlist, context, chapter_roller_event_handler);
 }
 
 void zereader_set_scroll_pos(size_t pos)
@@ -85,10 +113,15 @@ static void button_1_clicked_cb(lv_event_t *e)
       app_post_event(&event);
     }
   }
-  else if (*context == CONTEXT_MENU)
+  else if (*context == CONTEXT_MENU_BOOKS)
   {
     uint32_t type = LV_KEY_UP;
     lv_obj_send_event(book_roller, LV_EVENT_KEY, &type);
+  }
+  else if (*context == CONTEXT_MENU_CHAPTERS)
+  {
+    uint32_t type = LV_KEY_UP;
+    lv_obj_send_event(chapter_roller, LV_EVENT_KEY, &type);
   }
 }
 
@@ -100,7 +133,7 @@ static void button_2_clicked_cb(lv_event_t *e)
 
   if (*context == CONTEXT_READING)
   {
-    *context = CONTEXT_MENU;
+    *context = CONTEXT_MENU_BOOKS;
 
     // Save scroll position before opening menu
     app_event_t save_event = {
@@ -109,17 +142,21 @@ static void button_2_clicked_cb(lv_event_t *e)
     app_post_event(&save_event);
 
     zereader_control_bar_update_labels(control_bar, *context);
-    // zereader_show_bookmenu(context);
     app_event_t event = {
         .type = APP_EVENT_SHOW_BOOKMENU,
         .data.context.context = context,
     };
     app_post_event(&event);
   }
-  else if (*context == CONTEXT_MENU)
+  else if (*context == CONTEXT_MENU_BOOKS)
   {
     uint32_t type = LV_KEY_ENTER;
     lv_obj_send_event(book_roller, LV_EVENT_VALUE_CHANGED, &type);
+  }
+  else if (*context == CONTEXT_MENU_CHAPTERS)
+  {
+    uint32_t type = LV_KEY_ENTER;
+    lv_obj_send_event(chapter_roller, LV_EVENT_VALUE_CHANGED, &type);
   }
 }
 
@@ -131,14 +168,34 @@ static void button_3_clicked_cb(lv_event_t *e)
 
   if (*context == CONTEXT_READING)
   {
-    // Nothing? Settings?
+    *context = CONTEXT_MENU_CHAPTERS;
+    // Save scroll position before opening the chapter menu
+    app_event_t save_event = {
+        .type = APP_EVENT_SAVE_STATE,
+        .data.save_state.scroll_pos = lv_obj_get_scroll_y(text_area)};
+    app_post_event(&save_event);
+
+    zereader_control_bar_update_labels(control_bar, *context);
+    app_event_t event = {
+        .type = APP_EVENT_SHOW_CHAPTERMENU,
+        .data.context.context = context,
+    };
+    app_post_event(&event);
   }
-  else if (*context == CONTEXT_MENU)
+  else if (*context == CONTEXT_MENU_BOOKS)
   {
     *context = CONTEXT_READING;
     zereader_control_bar_update_labels(control_bar, *context);
     lv_obj_del(book_roller);
     book_roller = NULL;
+    // lv_obj_invalidate(text_area);
+  }
+  else if (*context == CONTEXT_MENU_CHAPTERS)
+  {
+    *context = CONTEXT_READING;
+    zereader_control_bar_update_labels(control_bar, *context);
+    lv_obj_del(chapter_roller);
+    chapter_roller = NULL;
     // lv_obj_invalidate(text_area);
   }
 }
@@ -164,10 +221,16 @@ static void button_4_clicked_cb(lv_event_t *e)
       app_post_event(&event);
     }
   }
-  else if (*context == CONTEXT_MENU)
+  else if (*context == CONTEXT_MENU_BOOKS)
   {
     uint32_t type = LV_KEY_DOWN;
     lv_obj_send_event(book_roller, LV_EVENT_KEY, &type);
+    lv_timer_handler();
+  }
+  else if (*context == CONTEXT_MENU_CHAPTERS)
+  {
+    uint32_t type = LV_KEY_DOWN;
+    lv_obj_send_event(chapter_roller, LV_EVENT_KEY, &type);
     lv_timer_handler();
   }
 }
@@ -236,12 +299,14 @@ void zereader_scroll_down()
 {
   // - 20 means scroll down 20 px
   lv_obj_scroll_by(text_area, 0, -UI_PAGE_SIZE, LV_ANIM_OFF);
+  screen_health();
 }
 
 void zereader_scroll_up()
 {
   // 20 means scroll up 20 px
   lv_obj_scroll_by(text_area, 0, +UI_PAGE_SIZE, LV_ANIM_OFF);
+  screen_health();
 }
 
 void zereader_show_logo()
@@ -274,6 +339,11 @@ void zereader_show_shutdown_screen()
   dev_mgmt_display_blanking_on();
   dev_mgmt_display_blanking_off();
   zereader_show_logo();
+}
+
+void zereader_update_chapter_status(uint32_t current_chapter, uint32_t num_chapters, char *title)
+{
+  zereader_status_bar_update_chapter(current_chapter + 1, num_chapters + 1, title);
 }
 
 void zereader_ui_lock(void)
