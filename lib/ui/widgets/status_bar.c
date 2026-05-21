@@ -14,7 +14,7 @@ LOG_MODULE_REGISTER(status_bar, CONFIG_ZEREADER_LOG_LEVEL);
 #define BATTERY_UPDATE_INTERVAL_MS 120000 // Update every 120 seconds
 #define BAT_MIN_MV 3300                   // 0% charge (3.3V)
 #define BAT_MAX_MV 4200                   // 100% charge (4.2V)
-#define BAT_CHARGER_MV 4900               // Threshold to detect charger (approx 5V)
+#define BAT_CHARGER_MV 4500               // Threshold to detect charger (approx 5V)
 
 extern const struct adc_dt_spec adc_chan3_vsys;
 static lv_obj_t *bat_label;
@@ -69,10 +69,12 @@ static void update_battery_cb(lv_timer_t *timer)
 
   if (adc_raw_to_millivolts_dt(&adc_chan3_vsys, &val_mv) == 0)
   {
+    LOG_DBG("Battery voltage raw: %d", val_mv);
     val_mv = (val_mv * 3);
     val_mv = val_mv - 50;
     val_mv /= 10;
     val_mv *= 10;
+    LOG_DBG("Battery voltage: %d", val_mv);
   }
 
   if (val_mv >= BAT_CHARGER_MV)
