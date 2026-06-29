@@ -128,6 +128,10 @@
     input-codes = <INPUT_KEY_1 INPUT_KEY_2 INPUT_KEY_3 INPUT_KEY_4>;
     coordinates = <10 470>, <360 470>, <450 470>, <770 470>;
   };
+  
+  zephyr_user: zephyr,user {
+    io-channels = <&adc 3>;  /* GPIO29 = ADC3 = VSYS/3 on Pico */
+  };
 };
 
 &spi0 {
@@ -174,4 +178,18 @@
 
 &i2c1 {
   status = "disabled";
+};
+
+&adc {
+    status = "okay";
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    channel@3 {
+        reg = <3>;
+        zephyr,gain = "ADC_GAIN_1";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+    };
 };
